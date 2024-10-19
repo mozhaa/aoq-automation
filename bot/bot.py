@@ -47,9 +47,11 @@ async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 async def add_new_anime(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     url = update.message.text
     try:
-        anime = db.add_anime(url)
+        anime, new = await db.add_anime(url)
         await update.message.reply_photo(
             caption=textwrap.dedent(f'''
+            {'<i>New!</i>' if new else ''}
+            
             <b>Romaji title:</b> {anime.title_ro}
             <b>English title:</b> {anime.title_en}
             <b>Russian title:</b> {anime.title_ru}

@@ -6,6 +6,7 @@ def main():
     db = DB()
     handler = Handler(db.get_cursor())
     bot.main(handler)
+    db.close()
 
 if __name__ == '__main__':
     main()

@@ -1,39 +1,21 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Dict
 
 class DBObject:
     def __init__(self):
         pass
 
-    def as_sql(self) -> str:
-        return (
-            '(' + 
-            ', '.join(
-                [
-                    '\'' + str(value) + '\'' 
-                    if isinstance(value, str) 
-                    else str(value) 
-                    for key, value in self.__dict__.items()
-                    if key != 'id'
-                ]
-            ) + 
-            ')'
-        )
+    def as_sql_values(self) -> Dict:
+        '''Example output: {"title_en": "aa", "title_ru": "sdf", ...}'''
+        return {key: value for key, value in self.__dict__.items() if value is not None}
     
-    def as_sql_header(self) -> str:
-        return (
-            '(' + 
-            ', '.join(
-                [
-                    f'\'{a}\'' 
-                    for a in dir(self) 
-                    if not a.startswith('__') and 
-                       not callable(getattr(self, a)) and 
-                       a != 'id'
-                ]
-            ) + 
-            ')'
-        )
+    def as_sql_placeholders(self) -> str:
+        '''Example output: "(:title_en, :title_ru, :title_ro, :year)"'''
+        return '(' + ', '.join([f':{key}' for key, value in self.__dict__.items() if value is not None]) + ')'
+    
+    def as_sql_keys(self) -> str:
+        '''Example output: "(title_en, title_ru, title_ro, year)"'''
+        return '(' + ', '.join([key for key, value in self.__dict__.items() if value is not None]) + ')'
     
     def from_sql(cls, sql):
         return cls(*sql)
@@ -67,5 +49,5 @@ class QItemSource(DBObject):
 
 if __name__ == '__main__':
     a = Anime()
-    print(a.as_sql_header())
-    print(a.as_sql())
+    print(a.as_sql_keys())
+    print(a.as_sql_values())
