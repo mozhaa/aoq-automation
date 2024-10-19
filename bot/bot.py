@@ -48,8 +48,8 @@ async def add_new_anime(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     url = update.message.text
     try:
         anime, new = await db.add_anime(url)
-        await update.message.reply_photo(
-            caption=textwrap.dedent(f'''
+        debug_msg = '\n'.join(['{} = {}'.format(key, value) for key, value in anime.__dict__.items()])
+        msg = textwrap.dedent(f'''
             {'<i>New!</i>' if new else ''}
             
             <b>Romaji title:</b> {anime.title_ro}
@@ -57,12 +57,15 @@ async def add_new_anime(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             <b>Russian title:</b> {anime.title_ru}
             
             On Shikimori: <i>{anime.shiki_rating:.2f}</i>
-            '''),
+            '''
+        )
+        await update.message.reply_photo(
+            caption=debug_msg,
             photo=anime.shiki_poster_url,
             parse_mode='HTML',
         )
         return CHOOSING_ACTION
-    except ValueError as e:
+    except RuntimeError as e:
         await update.message.reply_text(text=e.args[0])
         return ADDING_NEW_ANIME
 
@@ -98,7 +101,7 @@ def main(handler: Handler):
 def start_logger():
     global logger
     logging.basicConfig(
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.DEBUG
     )
     
     logging.getLogger("httpx").setLevel(logging.WARNING)

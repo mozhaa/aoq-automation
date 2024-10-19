@@ -48,6 +48,9 @@ class Page:
         anime_id = shiki_match.group(1)
         return await cls.from_mal_url(f'https://myanimelist.net/anime/{anime_id}')
 
+    async def load_stats_page(self):
+        self.stats_page = await pget(self.page.find('a:contains("Stats")').attr.href)
+
     @property
     def poster_url(self) -> str:
         if not hasattr(self, '_poster_url'):
@@ -80,6 +83,67 @@ class Page:
     @property
     def anime_id(self):
         return self._anime_id
+    
+    @property
+    def poster_url(self) -> str:
+        if not hasattr(self, '_poster_url'):
+            self._poster_url = None
+        return self._poster_url
+    
+    @property
+    def rating(self):
+        if not hasattr(self, '_rating'):
+            self._rating = float(self.page.find('[itemprop="ratingValue"]').text())
+        return self._rating
+    
+    @property
+    def favorites(self):
+        if not hasattr(self, '_favorites'):
+            self._favorites = int(self.page.find('.spaceit_pad span:contains("Favorites:")').parent().clone().remove('span').text().strip().replace(',', '').split('\n')[0])
+        return self._favorites
+    
+    @property
+    def popularity(self):
+        if not hasattr(self, '_popularity'):
+            self._popularity = int(self.page.find('.spaceit_pad span:contains("Popularity:")').parent().clone().remove('span').text().strip().replace(',', '').replace('#', '').split('\n')[0])
+        return self._popularity
+    
+    @property
+    def ranked(self):
+        if not hasattr(self, '_ranked'):
+            self._ranked = int(self.page.find('.spaceit_pad span:contains("Ranked:")').parent().clone().remove('span').text().strip().replace('#', '').replace(',', '').split('\n')[0])
+        return self._ranked
+        
+    @property
+    def watching(self):
+        if not hasattr(self, '_watching'):
+            self._watching = int(self.stats_page.find('.spaceit_pad span:contains("Watching:")').parent().clone().remove('span').text().strip().replace(',', '').replace('#', '').split('\n')[0])
+        return self._watching
+    
+    @property
+    def completed(self):
+        if not hasattr(self, '_completed'):
+            self._completed = int(self.stats_page.find('.spaceit_pad span:contains("Completed:")').parent().clone().remove('span').text().strip().replace(',', '').replace('#', '').split('\n')[0])
+        return self._completed
+    
+    @property
+    def plan_to_watch(self):
+        if not hasattr(self, '_plan_to_watch'):
+            self._plan_to_watch = int(self.stats_page.find('.spaceit_pad span:contains("Plan to Watch:")').parent().clone().remove('span').text().strip().replace(',', '').replace('#', '').split('\n')[0])
+        return self._plan_to_watch
+    
+    @property
+    def dropped(self):
+        if not hasattr(self, '_dropped'):
+            self._dropped = int(self.stats_page.find('.spaceit_pad span:contains("Dropped:")').parent().clone().remove('span').text().strip().replace(',', '').replace('#', '').split('\n')[0])
+        return self._dropped
+    
+    @property
+    def on_hold(self):
+        if not hasattr(self, '_on_hold'):
+            self._on_hold = int(self.stats_page.find('.spaceit_pad span:contains("On-Hold:")').parent().clone().remove('span').text().strip().replace(',', '').replace('#', '').split('\n')[0])
+        return self._on_hold
+    
 
 
 def search(query: str) -> List[str]:

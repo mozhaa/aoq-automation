@@ -90,8 +90,14 @@ class Page:
     def rating(self):
         if not hasattr(self, '_rating'):
             stats = eval(self.page.find('#rates_scores_stats').eq(0).attr['data-stats'])
-            self._rating = sum([int(stat[0]) * stat[1] for stat in stats]) / sum([stat[1] for stat in stats])
+            self._rating_count = sum([stat[1] for stat in stats])
+            self._rating = sum([int(stat[0]) * stat[1] for stat in stats]) / self._rating_count
         return self._rating
+    
+    @property
+    def rating_count(self):
+        self.rating
+        return self._rating_count
     
     @property
     def lists(self):
@@ -120,6 +126,17 @@ class Page:
     def on_hold(self):
         return self.lists.get('on_hold')
     
-    # @property
+    @property
+    def favorites(self):
+        if not hasattr(self, '_favorites'):
+            self._favorites = int(self.page.find('.b-favoured .subheadline .count').eq(0).text())
+        return self._favorites
+    
+    @property
+    def comments(self):
+        if not hasattr(self, '_comments'):
+            self._comments = int(self.page.find('[title="Все комментарии"] > .count').eq(0).text())
+        return self._comments
+    
     # def (self):
     # def get_airings(self)
