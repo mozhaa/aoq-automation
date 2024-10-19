@@ -1,11 +1,32 @@
 CREATE TABLE IF NOT EXISTS Anime(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    anime_id INTEGER,
     title_en TEXT,
     title_ro TEXT,
     title_ru TEXT,
     mal_url TEXT,
     shiki_url TEXT,
-    poster_url TEXT
+    poster_url TEXT,
+    aired_start TIMESTAMP,
+    aired_end TIMESTAMP,
+    shiki_rating REAL,
+    shiki_rating_count INTEGER,
+    shiki_plan_to_watch INTEGER DEFAULT 0,
+    shiki_completed INTEGER DEFAULT 0,
+    shiki_watching INTEGER DEFAULT 0,
+    shiki_dropped INTEGER DEFAULT 0,
+    shiki_on_hold INTEGER DEFAULT 0,
+    shiki_favorites INTEGER,
+    shiki_comments INTEGER,
+    mal_rating REAL,
+    mal_favorites INTEGER,
+    mal_popularity INTEGER,
+    mal_ranked INTEGER,
+    mal_plan_to_watch INTEGER DEFAULT 0,
+    mal_completed INTEGER DEFAULT 0,
+    mal_watching INTEGER DEFAULT 0,
+    mal_dropped INTEGER DEFAULT 0,
+    mal_on_hold INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS QItem(

@@ -21,9 +21,11 @@ class Page:
         if parsed.netloc not in ['shikimori.one', 'shikimori.org', 'shikimori.net']:
             logger.debug('      is not shiki url')
             return None
-        if re.match(r'^/animes/(\d*)(-.*)?$', parsed.path) is None:
+        shiki_match = re.match('^/animes/(\d*)(-.*)?$', parsed.path)
+        if shiki_match is None:
             logger.debug('      is not anime url')
             return None
+        result._anime_id = int(shiki_match.group(1))
         result.page = await pget(url=shiki_url)
         if result.page is None:
             logger.debug('      is unreachable page')
@@ -73,5 +75,23 @@ class Page:
     @property
     def title_ru(self):
         return self.titles.get('ru')
+    
+    @property
+    def anime_id(self):
+        return self._anime_id
+    
+    @property
+    def rating(self):
+        if not hasattr(self, '_rating'):
+            scores_container = self.page.find('#rates_scores_stats').eq(0)
+            total_people = 0
+            total_rating = 0
+            for line in scores_container.find('.line').items():
+                score = int(line.find('.x_label').eq(0).text())
+                bar_count = int(line.find('.bar-container > .bar').attr.title)
+                total_people += bar_count
+                total_rating += bar_count * score
+            self._rating = total_rating / total_people if total_people > 0 else 0
+        return self._rating
     
     # def get_airings(self)

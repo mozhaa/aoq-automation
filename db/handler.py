@@ -10,7 +10,8 @@ class Handler:
 
     async def add_anime(self, query: str) -> Anime:
         anime = await parse_anime_by_url(url=query)
-        if self.cur.exists(Anime, ['title_ru = ?'], [anime.title_ru]):
+        if self.cur.exists(anime, key_columns=['anime_id']):
+            self.cur.update(anime, key_columns=['anime_id'])
             return anime, False
         self.cur.insert(anime)
         return anime, True

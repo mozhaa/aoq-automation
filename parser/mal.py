@@ -22,9 +22,11 @@ class Page:
         if parsed.netloc != 'myanimelist.net':
             logger.debug('      is not mal url')
             return None
-        if re.match(r'^/anime/(\d*)$', parsed.path) is None:
+        mal_match = re.match('^/anime/(\d*)$', parsed.path)
+        if mal_match is None:
             logger.debug('      is not anime')
             return None
+        result._anime_id = int(mal_match.group(1))
         result.page = await pget(url=mal_url)
         if result.page is None:
             logger.debug('      is unreachable page')
@@ -74,6 +76,10 @@ class Page:
     @property
     def title_ru(self):
         return self.titles.get('ru')
+    
+    @property
+    def anime_id(self):
+        return self._anime_id
 
 
 def search(query: str) -> List[str]:

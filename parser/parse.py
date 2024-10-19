@@ -11,15 +11,11 @@ async def parse_anime_by_url(url: str) -> Anime | None:
     if shiki_page is None or mal_page is None:
         raise ValueError(f'{url} is not a valid url')
             
-    # get poster
+    anime.anime_id = mal_page.anime_id
     anime.poster_url = mal_page.poster or shiki_page.poster
-    
-    # get titles
     anime.title_en = mal_page.title_en
     anime.title_ro = mal_page.title_ro or shiki_page.title_ro
     anime.title_ru = shiki_page.title_ru
-    
-    # # get release year
-    # anime.airing_start, anime.airing_end = shiki_page.get_airings()
+    anime.shiki_rating = shiki_page.rating
     
     return anime

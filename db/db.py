@@ -12,22 +12,32 @@ class SmartCursor(sqlite3.Cursor):
         self.con = con
     
     def execute(self, sql: str, parameters):
-        logger.info(sql)
+        logger.info(sql + '; ' + str(parameters))
         result = self.cur.execute(sql, parameters)
         self.con.commit()
         return result
         
     def insert(self, obj: db.objects.DBObject):
         return self.execute(
-            sql=f'INSERT INTO {type(obj).__name__} {obj.as_sql_keys()} VALUES {obj.as_sql_placeholders()};', 
-            parameters=obj.as_sql_values()
+            sql=f'INSERT INTO {type(obj).__name__} {obj.select_columns()} VALUES {obj.select_placeholders()};', 
+            parameters=obj.select_parameters()
         )
     
-    def exists(self, obj_type: Type[db.objects.DBObject], conditions: List[str], parameters) -> bool:
+    def exists(self, obj: db.objects.DBObject, key_columns: List[str]) -> bool:
+        '''Check if element with key_columns same as obj exists in DB'''
         return self.execute(
-            sql=f'SELECT id FROM {obj_type.__name__} WHERE {" AND ".join(conditions)}',
-            parameters=parameters
+            sql=f'SELECT id FROM {type(obj).__name__} WHERE {obj.where_placeholders(key_columns)}',
+            parameters=obj.where_parameters(key_columns)
         ).fetchone() is not None
+    
+    def update(self, obj: db.objects.DBObject, key_columns: List[str]):
+        '''Find element by key_columns and update it with obj data'''
+        parameters = obj.where_parameters(key_columns)
+        parameters.update(obj.set_parameters())
+        return self.execute(
+            sql=f'UPDATE {type(obj).__name__} SET {obj.set_placeholders()} WHERE {obj.where_placeholders(key_columns)}',
+            parameters=parameters
+        )
 
 
 class DB:

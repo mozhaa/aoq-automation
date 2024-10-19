@@ -55,6 +55,8 @@ async def add_new_anime(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             <b>Romaji title:</b> {anime.title_ro}
             <b>English title:</b> {anime.title_en}
             <b>Russian title:</b> {anime.title_ru}
+            
+            On Shikimori: <i>{anime.shiki_rating:.2f}</i>
             '''),
             photo=anime.poster_url,
             parse_mode='HTML',
