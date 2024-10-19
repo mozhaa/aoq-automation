@@ -49,10 +49,16 @@ class Page:
 
 
     @property
-    def poster(self):
-        if not hasattr(self, '_poster'):
-            self._poster = self.page.find('.c-poster .b-image img').eq(0).attr.src
-        return self._poster
+    def poster_thumbnail_url(self):
+        if not hasattr(self, '_poster_thumbnail_url'):
+            self._poster_thumbnail_url = self.page.find('.c-poster .b-image img').eq(0).attr.src
+        return self._poster_thumbnail_url
+        
+    @property
+    def poster_url(self):
+        if not hasattr(self, '_poster_url'):
+            self._poster_url = self.page.find('.c-poster .b-image').eq(0).attr['data-href']
+        return self._poster_url
         
     @property
     def titles(self):
@@ -83,15 +89,37 @@ class Page:
     @property
     def rating(self):
         if not hasattr(self, '_rating'):
-            scores_container = self.page.find('#rates_scores_stats').eq(0)
-            total_people = 0
-            total_rating = 0
-            for line in scores_container.find('.line').items():
-                score = int(line.find('.x_label').eq(0).text())
-                bar_count = int(line.find('.bar-container > .bar').attr.title)
-                total_people += bar_count
-                total_rating += bar_count * score
-            self._rating = total_rating / total_people if total_people > 0 else 0
+            stats = eval(self.page.find('#rates_scores_stats').eq(0).attr['data-stats'])
+            self._rating = sum([int(stat[0]) * stat[1] for stat in stats]) / sum([stat[1] for stat in stats])
         return self._rating
     
+    @property
+    def lists(self):
+        if not hasattr(self, '_lists'):
+            stats = eval(self.page.find('#rates_statuses_stats').eq(0).attr['data-stats'])
+            self._lists = dict(stats)
+        return self._lists
+        
+    @property
+    def watching(self):
+        return self.lists.get('watching')
+    
+    @property
+    def completed(self):
+        return self.lists.get('completed')
+    
+    @property
+    def plan_to_watch(self):
+        return self.lists.get('planned')
+    
+    @property
+    def dropped(self):
+        return self.lists.get('dropped')
+    
+    @property
+    def on_hold(self):
+        return self.lists.get('on_hold')
+    
+    # @property
+    # def (self):
     # def get_airings(self)

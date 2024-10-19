@@ -49,10 +49,10 @@ class Page:
         return await cls.from_mal_url(f'https://myanimelist.net/anime/{anime_id}')
 
     @property
-    def poster(self) -> str:
-        if not hasattr(self, '_poster'):
-            self._poster = self.page.find('.leftside a img.lazyloaded').eq(0).attr.src
-        return self._poster
+    def poster_url(self) -> str:
+        if not hasattr(self, '_poster_url'):
+            self._poster_url = self.page.find('.leftside a img.lazyloaded').eq(0).attr.src
+        return self._poster_url
 
     @property
     def titles(self) -> str:

@@ -58,7 +58,7 @@ async def add_new_anime(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             
             On Shikimori: <i>{anime.shiki_rating:.2f}</i>
             '''),
-            photo=anime.poster_url,
+            photo=anime.shiki_poster_url,
             parse_mode='HTML',
         )
         return CHOOSING_ACTION
