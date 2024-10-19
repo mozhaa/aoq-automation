@@ -1,0 +1,6 @@
+*.hidden
+.vscode
+__pycache__
+*.db
+*.wav
+driver
