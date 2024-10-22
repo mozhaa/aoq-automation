@@ -14,7 +14,7 @@ async def parse_anime_by_url(url: str) -> Anime | None:
             
     anime.shiki_url = shiki_page.url
     anime.mal_url = mal_page.url
-    anime.anime_id = mal_page.anime_id
+    anime.mal_id = mal_page.mal_id
     anime.title_en = mal_page.title_en
     anime.title_ro = mal_page.title_ro or shiki_page.title_ro
     anime.title_ru = shiki_page.title_ru

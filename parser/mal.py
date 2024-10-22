@@ -27,7 +27,7 @@ class Page:
         if mal_match is None:
             logger.debug('      is not anime')
             return None
-        result._anime_id = int(mal_match.group(1))
+        result._mal_id = int(mal_match.group(1))
         result.page = await pget(url=mal_url)
         if result.page is None:
             logger.debug('      is unreachable page')
@@ -46,8 +46,8 @@ class Page:
         if shiki_match is None:
             logger.debug('      is not shiki anime url')
             return None
-        anime_id = shiki_match.group(1)
-        return await cls.from_mal_url(f'https://myanimelist.net/anime/{anime_id}')
+        mal_id = shiki_match.group(1)
+        return await cls.from_mal_url(f'https://myanimelist.net/anime/{mal_id}')
 
     async def load_stats_page(self):
         self.stats_page = await pget(self.page.find('a:contains("Stats")').attr.href)
@@ -82,8 +82,8 @@ class Page:
         return self.titles.get('ru')
     
     @property
-    def anime_id(self):
-        return self._anime_id
+    def mal_id(self):
+        return self._mal_id
     
     @property
     def poster_url(self) -> str:

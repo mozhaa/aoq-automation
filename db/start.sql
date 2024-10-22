@@ -1,12 +1,11 @@
 CREATE TABLE IF NOT EXISTS Anime(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    anime_id INTEGER,
     title_en TEXT,
     title_ro TEXT,
     title_ru TEXT,
     aired_start TIMESTAMP,
     aired_end TIMESTAMP,
-    mal_url TEXT,
+
     shiki_url TEXT,
     shiki_poster_url TEXT,
     shiki_poster_thumbnail_url TEXT,
@@ -19,6 +18,9 @@ CREATE TABLE IF NOT EXISTS Anime(
     shiki_on_hold INTEGER,
     shiki_favorites INTEGER,
     shiki_comments INTEGER,
+    
+    mal_url TEXT,
+    mal_id INTEGER,
     mal_poster_url TEXT,
     mal_rating REAL,
     mal_favorites INTEGER,

@@ -25,7 +25,7 @@ class Page:
         if shiki_match is None:
             logger.debug('      is not anime url')
             return None
-        result._anime_id = int(shiki_match.group(1))
+        result._mal_id = int(shiki_match.group(1))
         result.page = await pget(url=shiki_url)
         if result.page is None:
             logger.debug('      is unreachable page')
@@ -44,8 +44,8 @@ class Page:
         if mal_match is None:
             logger.debug('      is not mal anime url')
             return None
-        anime_id = mal_match.group(1)
-        return await cls.from_shiki_url(f'https://shikimori.one/animes/{anime_id}')
+        mal_id = mal_match.group(1)
+        return await cls.from_shiki_url(f'https://shikimori.one/animes/{mal_id}')
 
 
     @property
@@ -83,8 +83,8 @@ class Page:
         return self.titles.get('ru')
     
     @property
-    def anime_id(self):
-        return self._anime_id
+    def mal_id(self):
+        return self._mal_id
     
     @property
     def rating(self):
