@@ -1,3 +1,4 @@
+from db.types import *
 from db.objects import *
 from parser import mal, shiki
 import asyncio
@@ -11,6 +12,8 @@ async def parse_anime_by_url(url: str) -> Anime | None:
     if shiki_page is None or mal_page is None:
         raise RuntimeError(f'{url} is not a valid url')
             
+    anime.shiki_url = shiki_page.url
+    anime.mal_url = mal_page.url
     anime.anime_id = mal_page.anime_id
     anime.title_en = mal_page.title_en
     anime.title_ro = mal_page.title_ro or shiki_page.title_ro
@@ -40,4 +43,6 @@ async def parse_anime_by_url(url: str) -> Anime | None:
     anime.mal_dropped = mal_page.dropped
     anime.mal_on_hold = mal_page.on_hold
     
-    return anime
+    qitems = mal_page.qitems
+    
+    return anime, qitems

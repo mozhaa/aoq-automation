@@ -4,6 +4,7 @@ import logging
 from urllib.parse import urlparse
 from utils import pget
 from typing import *
+from db.types import *
 
 logger = logging.getLogger(__name__)
 
@@ -144,6 +145,44 @@ class Page:
             self._on_hold = int(self.stats_page.find('.spaceit_pad span:contains("On-Hold:")').parent().clone().remove('span').text().strip().replace(',', '').replace('#', '').split('\n')[0])
         return self._on_hold
     
+    @property
+    def qitems(self):
+        if not hasattr(self, '_qitems'):
+            self._qitems = []
+            # opnening not a typo (not mine)
+            ops = self.page.find('.theme-songs.opnening .theme-song-artist').parent().items()
+            eds = self.page.find('.theme-songs.ending .theme-song-artist').parent().items()
+            counters = {}
+            for items, item_type_idx in zip([ops, eds], [0, 1]):
+                for item in items:
+                    qitem = QItem()
+                    
+                    qitem.item_type = item_type_idx
+                    
+                    if item_type_idx not in counters.keys():
+                        counters[item_type_idx] = 1
+                    else:
+                        counters[item_type_idx] += 1
+                    
+                    theme_song_index = item.find('.theme-song-index')
+                    if theme_song_index.text() is not None:
+                        theme_song_index = theme_song_index.text().replace(':', '')
+                        qitem.num = int(theme_song_index) if theme_song_index != '' else counters[item_type_idx]
+                    else:
+                        qitem.num = counters[item_type_idx]
+                    
+                    theme_song_artist = item.find('.theme-song-artist')
+                    if theme_song_artist is not None:
+                        qitem.song_artist = theme_song_artist.text()[3:]
+                    
+                    theme_song_episode = item.find('.theme-song-episode')
+                    if theme_song_episode is not None:
+                        qitem.episodes = theme_song_episode.text()[1:-1]
+                    
+                    qitem.song_name = item.clone().remove('span').text()[1:-1]
+                    
+                    self._qitems.append(qitem)
+        return self._qitems
 
 
 def search(query: str) -> List[str]:
