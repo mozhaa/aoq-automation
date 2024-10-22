@@ -1,142 +1,135 @@
 import re
-import logging
+from pathlib import PurePosixPath
 from urllib.parse import urlparse
+from functools import cached_property
+
 from utils import pget
 from typing import *
+from parser.mal import MALUrlParser
 
-logger = logging.getLogger(__name__)
 
-class Page:
+class ShikiUrlParser:
+    def __init__(self, url: str):
+        self.url = url
+        self.parsed_url = urlparse(url)
+        self.path_parts = PurePosixPath(self.parsed_url.path).parts
+
+    def is_shiki_url(self) -> bool:
+        return self.parsed_url.netloc in [
+            "shikimori.one",
+            "shikimori.org",
+            "shikimori.net",
+        ]
+
+    def is_shiki_anime_url(self) -> bool:
+        return (
+            len(self.path_parts) >= 2
+            and self.path_parts[0] == "animes"
+            and self.path_parts[1].split("-")[0].isdigit()
+        )
+
+    def is_valid(self) -> bool:
+        return self.is_shiki_url() and self.is_shiki_anime_url()
+
+    def get_mal_id(self) -> int:
+        return int(self.path_parts[1].split("-")[0])
+
+    def to_mal_url(self) -> str:
+        return f"https://myanimelist.net/anime/{self.get_mal_id()}"
+
+    def get_clean_url(self) -> str:
+        return f"https://shikimori.one/animes/{self.path_parts[1]}"
+
+
+class MALAnimeParser:
+    async def __init__(self, url: str):
+        self.url_parser = ShikiUrlParser(url)
+        if not self.url_parser.is_valid():
+            raise ValueError(f'"{url}" is not valid Shiki url')
+        self.page = await self.load_page(url)
+        self.stats_page = await self.load_page(self.stats_url)
+
+    async def load_page(self, url: str):
+        page = await pget(url)
+        if page is None or len(page.find(".error-404").eq(0)) > 0:
+            raise ValueError(f'"{url}" is not valid Shiki url')
+        return page
+
+    @cached_property
+    def url(self) -> str:
+        return self.url_parser.get_clean_url()
+
     @classmethod
-    async def from_url(cls, url: str):
-        logger.debug('from_url("%s")', url)
-        return (await cls.from_shiki_url(url)) or (await cls.from_mal_url(url))
-    
-    @classmethod
-    async def from_shiki_url(cls, shiki_url: str):
-        logger.debug('  trying from_shiki_url("%s")', shiki_url)
-        result = cls()
-        result.url = shiki_url
-        parsed = urlparse(shiki_url)
-        if parsed.netloc not in ['shikimori.one', 'shikimori.org', 'shikimori.net']:
-            logger.debug('      is not shiki url')
-            return None
-        shiki_match = re.match('^/animes/(\d*)(-.*)?$', parsed.path)
-        if shiki_match is None:
-            logger.debug('      is not anime url')
-            return None
-        result._mal_id = int(shiki_match.group(1))
-        result.page = await pget(url=shiki_url)
-        if result.page is None:
-            logger.debug('      is unreachable page')
-            return None
-        if result.page.find('.error-404').eq(0) != []:
-            logger.debug('      is invalid anime page')
-            return None
-        logger.debug('      success')
-        return result
+    async def from_mal_url(cls, url: str):
+        url_parser = MALUrlParser(url)
+        if not url_parser.is_valid():
+            raise ValueError(f'"{url}" is not valid MAL url')
+        return cls(url_parser.to_shiki_url())
 
-
-    @classmethod
-    async def from_mal_url(cls, mal_url: str):
-        logger.debug('  trying from_mal_url("%s")', mal_url)
-        mal_match = re.match('^/anime/([0-9]*)$', urlparse(mal_url).path)
-        if mal_match is None:
-            logger.debug('      is not mal anime url')
-            return None
-        mal_id = mal_match.group(1)
-        return await cls.from_shiki_url(f'https://shikimori.one/animes/{mal_id}')
-
-
-    @property
+    @cached_property
     def poster_thumbnail_url(self):
-        if not hasattr(self, '_poster_thumbnail_url'):
-            self._poster_thumbnail_url = self.page.find('.c-poster .b-image img').eq(0).attr.src
-        return self._poster_thumbnail_url
-        
-    @property
+        return self.page.find(".c-poster .b-image img").eq(0).attr.src
+
+    @cached_property
     def poster_url(self):
-        if not hasattr(self, '_poster_url'):
-            self._poster_url = self.page.find('.c-poster .b-image').eq(0).attr['data-href']
-        return self._poster_url
-        
-    @property
+        return self.page.find(".c-poster .b-image").eq(0).attr["data-href"]
+
+    @cached_property
     def titles(self):
-        if not hasattr(self, '_titles'):
-            ru, ro = map(lambda s: s.strip(), self.page.find('header.head > h1').eq(0).text().split('/'))
-            self._titles = {
-                'ro': ro,
-                'ru': ru,
-            }
-        return self._titles
-        
-    @property
-    def title_en(self):
-        return self.titles.get('en')
-    
-    @property
-    def title_ro(self):
-        return self.titles.get('ro')
-    
-    @property
+        return dict(zip(['ru', 'ro'], self.page.find("header.head > h1").eq(0).text().split("/")))
+
+    @cached_property
     def title_ru(self):
-        return self.titles.get('ru')
-    
-    @property
+        return self.titles['ru']
+
+    @cached_property
+    def title_ro(self):
+        return self.titles['ro']
+
+    @cached_property
     def mal_id(self):
-        return self._mal_id
-    
-    @property
+        return self.url_parser.get_mal_id()
+
+    @cached_property
+    def scores_stats(self):
+        return eval(self.page.find("#rates_scores_stats").eq(0).attr["data-stats"])
+
+    @cached_property
     def rating(self):
-        if not hasattr(self, '_rating'):
-            stats = eval(self.page.find('#rates_scores_stats').eq(0).attr['data-stats'])
-            self._rating_count = sum([stat[1] for stat in stats])
-            self._rating = sum([int(stat[0]) * stat[1] for stat in stats]) / self._rating_count
-        return self._rating
-    
-    @property
+        return sum([int(stat[0]) * stat[1] for stat in self.scores_stats]) / self.rating_count
+
+    @cached_property
     def rating_count(self):
-        self.rating
-        return self._rating_count
-    
-    @property
-    def lists(self):
-        if not hasattr(self, '_lists'):
-            stats = eval(self.page.find('#rates_statuses_stats').eq(0).attr['data-stats'])
-            self._lists = dict(stats)
-        return self._lists
-        
-    @property
+        return sum([stat[1] for stat in self.scores_stats])
+
+    @cached_property
+    def statuses_stats(self):
+        return eval(self.page.find("#rates_statuses_stats").eq(0).attr["data-stats"])
+
+    @cached_property
     def watching(self):
-        return self.lists.get('watching')
-    
-    @property
+        return self.statuses_stats.get("watching")
+
+    @cached_property
     def completed(self):
-        return self.lists.get('completed')
-    
-    @property
+        return self.statuses_stats.get("completed")
+
+    @cached_property
     def plan_to_watch(self):
-        return self.lists.get('planned')
-    
-    @property
+        return self.statuses_stats.get("planned")
+
+    @cached_property
     def dropped(self):
-        return self.lists.get('dropped')
-    
-    @property
+        return self.statuses_stats.get("dropped")
+
+    @cached_property
     def on_hold(self):
-        return self.lists.get('on_hold')
-    
-    @property
+        return self.statuses_stats.get("on_hold")
+
+    @cached_property
     def favorites(self):
-        if not hasattr(self, '_favorites'):
-            self._favorites = int(self.page.find('.b-favoured .subheadline .count').eq(0).text())
-        return self._favorites
-    
-    @property
+        return int(self.page.find(".b-favoured .subheadline .count").eq(0).text())
+
+    @cached_property
     def comments(self):
-        if not hasattr(self, '_comments'):
-            self._comments = int(self.page.find('[title="Все комментарии"] > .count').eq(0).text())
-        return self._comments
-    
-    # def (self):
-    # def get_airings(self)
+        return int(self.page.find('[title="Все комментарии"] > .count').eq(0).text())
