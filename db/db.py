@@ -14,14 +14,15 @@ class SmartCursor(sqlite3.Cursor):
     def execute(self, sql: str, parameters):
         logger.info(sql + '; ' + str(parameters))
         result = self.cur.execute(sql, parameters)
-        self.con.commit()
         return result
         
     def insert(self, obj: db.objects.DBObject):
-        return self.execute(
-            sql=f'INSERT INTO {type(obj).__name__} {obj.select_columns()} VALUES {obj.select_placeholders()};', 
+        result = self.execute(
+            sql=f'INSERT INTO {type(obj).__name__} {obj.select_columns()} VALUES {obj.select_placeholders()} RETURNING id;', 
             parameters=obj.select_parameters()
-        )
+        ).fetchall()[0][0]
+        self.con.commit()
+        return result
     
     def exists(self, obj: db.objects.DBObject, key_columns: List[str]) -> bool:
         '''Check if element with key_columns same as obj exists in DB'''
@@ -34,10 +35,12 @@ class SmartCursor(sqlite3.Cursor):
         '''Find element by key_columns and update it with obj data'''
         parameters = obj.where_parameters(key_columns)
         parameters.update(obj.set_parameters())
-        return self.execute(
-            sql=f'UPDATE {type(obj).__name__} SET {obj.set_placeholders()} WHERE {obj.where_placeholders(key_columns)}',
+        result = self.execute(
+            sql=f'UPDATE {type(obj).__name__} SET {obj.set_placeholders()} WHERE {obj.where_placeholders(key_columns)} RETURNING id;',
             parameters=parameters
-        )
+        ).fetchall()[0][0]
+        self.con.commit()
+        return result
 
 
 class DB:
