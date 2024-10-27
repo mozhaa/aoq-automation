@@ -1,5 +1,6 @@
 from typing import *
 
+
 class DBObject:
     def __init__(self):
         pass
@@ -23,10 +24,14 @@ class DBObject:
         return ' AND '.join(["{col} = :{col}".format(col=col) for col in key_columns])
     
     def set_placeholders(self):
-        return self.where_placeholders(self.__dict__.keys())
+        return self.where_placeholders(self.columns())
     
     def set_parameters(self):
-        return self.where_parameters(self.__dict__.keys())
+        return self.where_parameters(self.columns())
     
+    def columns(self):
+        return self.__dict__.keys()
+    
+    @classmethod
     def from_sql(cls, sql):
         return cls(*sql)

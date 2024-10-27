@@ -4,3 +4,4 @@ __pycache__
 *.db
 *.wav
 driver
+.pytest_cache

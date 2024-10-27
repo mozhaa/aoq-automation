@@ -1,19 +1,23 @@
-from db.types import *
-from db.objects import *
-from parser import mal, shiki
+from typing import *
 import asyncio
 
-async def parse_anime_by_url(url: str) -> Anime | None:
+from aoq.database import *
+from .mal import MALAnimeParser
+from .shiki import ShikiAnimeParser
+from .url import parse_url
+
+async def parse_anime_by_url(url: str) -> Anime:
     anime = Anime()
         
-    # get pages on mal and shiki
-    shiki_page, mal_page = await asyncio.gather(shiki.Page.from_url(url), mal.Page.from_url(url))
-    
-    if shiki_page is None or mal_page is None:
+    urls = parse_url(url)
+    if urls is None:
         raise RuntimeError(f'{url} is not a valid url')
+    
+    shiki_page, mal_page = ShikiAnimeParser(urls['shiki']), MALAnimeParser(urls['mal'])
+    await asyncio.gather(shiki_page.load_pages(), mal_page.load_pages())
             
-    anime.shiki_url = shiki_page.url
     anime.mal_url = mal_page.url
+    anime.shiki_url = shiki_page.url
     anime.mal_id = mal_page.mal_id
     anime.title_en = mal_page.title_en
     anime.title_ro = mal_page.title_ro or shiki_page.title_ro
@@ -36,13 +40,14 @@ async def parse_anime_by_url(url: str) -> Anime | None:
     anime.mal_rating = mal_page.rating
     anime.mal_popularity = mal_page.popularity
     anime.mal_ranked = mal_page.ranked
-    await mal_page.load_stats_page()
     anime.mal_plan_to_watch = mal_page.plan_to_watch
     anime.mal_completed = mal_page.completed
     anime.mal_watching = mal_page.watching
     anime.mal_dropped = mal_page.dropped
     anime.mal_on_hold = mal_page.on_hold
     
-    qitems = mal_page.qitems
-    
-    return anime, qitems
+    return anime
+
+async def parse_qitems_by_url(url: str) -> List[QItem]:
+    mal_page = await MALAnimeParser(url)
+    return mal_page.qitems

@@ -1,53 +1,18 @@
-import re
-from pathlib import PurePosixPath
-from urllib.parse import urlparse
 from functools import cached_property
-
-from utils import pget
 from typing import *
-from parser.mal import MALUrlParser
+
+from .request import pget
+from .url import *
 
 
-class ShikiUrlParser:
+class ShikiAnimeParser:
     def __init__(self, url: str):
-        self.url = url
-        self.parsed_url = urlparse(url)
-        self.path_parts = PurePosixPath(self.parsed_url.path).parts
-
-    def is_shiki_url(self) -> bool:
-        return self.parsed_url.netloc in [
-            "shikimori.one",
-            "shikimori.org",
-            "shikimori.net",
-        ]
-
-    def is_shiki_anime_url(self) -> bool:
-        return (
-            len(self.path_parts) >= 2
-            and self.path_parts[0] == "animes"
-            and self.path_parts[1].split("-")[0].isdigit()
-        )
-
-    def is_valid(self) -> bool:
-        return self.is_shiki_url() and self.is_shiki_anime_url()
-
-    def get_mal_id(self) -> int:
-        return int(self.path_parts[1].split("-")[0])
-
-    def to_mal_url(self) -> str:
-        return f"https://myanimelist.net/anime/{self.get_mal_id()}"
-
-    def get_clean_url(self) -> str:
-        return f"https://shikimori.one/animes/{self.path_parts[1]}"
-
-
-class MALAnimeParser:
-    async def __init__(self, url: str):
         self.url_parser = ShikiUrlParser(url)
         if not self.url_parser.is_valid():
             raise ValueError(f'"{url}" is not valid Shiki url')
-        self.page = await self.load_page(url)
-        self.stats_page = await self.load_page(self.stats_url)
+
+    async def load_pages(self):
+        self.page = await self.load_page(self.url)
 
     async def load_page(self, url: str):
         page = await pget(url)
@@ -55,16 +20,16 @@ class MALAnimeParser:
             raise ValueError(f'"{url}" is not valid Shiki url')
         return page
 
-    @cached_property
-    def url(self) -> str:
-        return self.url_parser.get_clean_url()
-
     @classmethod
     async def from_mal_url(cls, url: str):
         url_parser = MALUrlParser(url)
         if not url_parser.is_valid():
             raise ValueError(f'"{url}" is not valid MAL url')
         return cls(url_parser.to_shiki_url())
+
+    @cached_property
+    def url(self) -> str:
+        return self.url_parser.shiki_url
 
     @cached_property
     def poster_thumbnail_url(self):
@@ -76,7 +41,7 @@ class MALAnimeParser:
 
     @cached_property
     def titles(self):
-        return dict(zip(['ru', 'ro'], self.page.find("header.head > h1").eq(0).text().split("/")))
+        return dict(zip(['ro', 'ru'], map(lambda s: s.strip(), self.page.find("header.head > h1").eq(0).text().split("/"))))
 
     @cached_property
     def title_ru(self):
@@ -88,7 +53,7 @@ class MALAnimeParser:
 
     @cached_property
     def mal_id(self):
-        return self.url_parser.get_mal_id()
+        return self.url_parser.mal_id
 
     @cached_property
     def scores_stats(self):
@@ -104,7 +69,7 @@ class MALAnimeParser:
 
     @cached_property
     def statuses_stats(self):
-        return eval(self.page.find("#rates_statuses_stats").eq(0).attr["data-stats"])
+        return {k: v for k, v in eval(self.page.find("#rates_statuses_stats").eq(0).attr["data-stats"])}
 
     @cached_property
     def watching(self):
@@ -128,7 +93,8 @@ class MALAnimeParser:
 
     @cached_property
     def favorites(self):
-        return int(self.page.find(".b-favoured .subheadline .count").eq(0).text())
+        el = self.page.find(".b-favoured .subheadline .count").eq(0)
+        return int(el.text()) if len(el) > 0 else 0
 
     @cached_property
     def comments(self):

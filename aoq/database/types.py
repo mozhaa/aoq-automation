@@ -1,5 +1,7 @@
 from dataclasses import dataclass
-from db.objects import DBObject
+
+from .object import DBObject
+
 
 @dataclass
 class Anime(DBObject):

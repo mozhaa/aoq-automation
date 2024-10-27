@@ -1,12 +1,14 @@
 import sqlite3
 import logging
 from pathlib import Path
-from typing import Type, List
-import db.objects
+from typing import *
+
+from .object import DBObject
 
 logger = logging.getLogger(__name__)
 
-class SmartCursor(sqlite3.Cursor):
+
+class DatabaseCursor(sqlite3.Cursor):
     def __init__(self, cur: sqlite3.Cursor, con: sqlite3.Connection):
         self.cur = cur
         self.con = con
@@ -16,7 +18,7 @@ class SmartCursor(sqlite3.Cursor):
         result = self.cur.execute(sql, parameters)
         return result
         
-    def insert(self, obj: db.objects.DBObject):
+    def insert(self, obj: DBObject):
         result = self.execute(
             sql=f'INSERT INTO {type(obj).__name__} {obj.select_columns()} VALUES {obj.select_placeholders()} RETURNING id;', 
             parameters=obj.select_parameters()
@@ -24,14 +26,14 @@ class SmartCursor(sqlite3.Cursor):
         self.con.commit()
         return result
     
-    def exists(self, obj: db.objects.DBObject, key_columns: List[str]) -> bool:
+    def exists(self, obj: DBObject, key_columns: List[str]) -> bool:
         '''Check if element with key_columns same as obj exists in DB'''
         return self.execute(
             sql=f'SELECT id FROM {type(obj).__name__} WHERE {obj.where_placeholders(key_columns)}',
             parameters=obj.where_parameters(key_columns)
         ).fetchone()
     
-    def update(self, obj: db.objects.DBObject, key_columns: List[str]):
+    def update(self, obj: DBObject, key_columns: List[str]):
         '''Find element by key_columns and update it with obj data'''
         parameters = obj.where_parameters(key_columns)
         parameters.update(obj.set_parameters())
@@ -42,20 +44,30 @@ class SmartCursor(sqlite3.Cursor):
         self.con.commit()
         return result
 
+    def select(self, obj: DBObject, key_columns: List[str]):
+        results = self.execute(
+            sql=f'SELECT * FROM {type(obj).__name__} WHERE {obj.where_placeholders(key_columns)}',
+            parameters=obj.where_parameters(key_columns)
+        ).fetchall()
+        return [type(obj)(**{k: v for k, v in zip(obj.columns(), result)}) for result in results]
 
-class DB:
-    def __init__(self, fp: str = 'db/database.db') -> None:
+    def select_all(self, obj_type: Type[DBObject]):
+        return self.select(obj_type(), key_columns=[])
+
+
+class Database:
+    def __init__(self, fp: str, init_fp: str) -> None:
         exist = Path(fp).is_file()
         
         self.con = sqlite3.connect(fp)
         self.cur = self.con.cursor()
         
         if not exist:
-            with open('db/start.sql', 'r') as f:
+            with open(init_fp, 'r') as f:
                 self.cur.executescript(f.read())
     
-    def get_cursor(self) -> SmartCursor:
-        return SmartCursor(self.con.cursor(), self.con)
+    def get_cursor(self) -> DatabaseCursor:
+        return DatabaseCursor(self.con.cursor(), self.con)
 
     def close(self):
         self.con.close()
