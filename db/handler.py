@@ -21,5 +21,7 @@ class Handler:
             else:
                 self.cur.insert(qitem)
         return anime, exists
-        
+    
+    async def find_anime(self, columns: Dict):
+        return self.cur.exists(Anime(**columns), key_columns=columns.keys())
             

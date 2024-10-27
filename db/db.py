@@ -29,7 +29,7 @@ class SmartCursor(sqlite3.Cursor):
         return self.execute(
             sql=f'SELECT id FROM {type(obj).__name__} WHERE {obj.where_placeholders(key_columns)}',
             parameters=obj.where_parameters(key_columns)
-        ).fetchone() is not None
+        ).fetchone()
     
     def update(self, obj: db.objects.DBObject, key_columns: List[str]):
         '''Find element by key_columns and update it with obj data'''

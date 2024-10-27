@@ -53,9 +53,16 @@ class QItemSource(DBObject):
 	path = None
 
 @dataclass
-class QitemSourceTiming(DBObject):
+class QItemSourceTiming(DBObject):
 	qitemsource_id = None
 	id = None
 	author = None
 	guess_time = None
 	reveal_time = None
+
+@dataclass
+class QItemDifficulty(DBObject):
+	qitem_id = None
+	id = None
+	author = None
+	value = None

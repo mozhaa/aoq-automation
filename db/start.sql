@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS QItemSource(
     path TEXT
 );
 
-CREATE TABLE IF NOT EXISTS QitemSourceTiming(
+CREATE TABLE IF NOT EXISTS QItemSourceTiming(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     qitemsource_id INTEGER REFERENCES QItemSource(id),
     author TEXT, -- manual, auto

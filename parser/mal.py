@@ -1,5 +1,4 @@
-from urllib import quote_plus
-from urllib.parse import urlparse
+from urllib.parse import urlparse, quote_plus
 from pathlib import PurePosixPath
 from functools import cached_property
 from pyquery import PyQuery
@@ -153,13 +152,13 @@ class MALAnimeParser:
         return qitems
 
 
-def search(query: str) -> List[str]:
+async def search(query: str) -> List[str]:
     url = f'https://myanimelist.net/search/all?q={quote_plus(query)}&cat=all'
-    page = pget(url)
+    page = await pget(url)
     if page is None:
         return []
     return [
-        a.attr.href for a in page.find('h2#anime ~ article a.hoverinfo_trigger').items()
+        (a.attr.href, a.text()) for a in page.find('h2#anime ~ article a.hoverinfo_trigger').items()
     ]
 
 
