@@ -24,7 +24,7 @@ class MALUrlParser:
 
     @property
     def mal_id(self) -> int:
-        return self.path_parts[2]
+        return int(self.path_parts[2])
 
     @property
     def shiki_url(self) -> str:

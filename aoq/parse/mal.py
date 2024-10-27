@@ -1,7 +1,6 @@
 from urllib.parse import quote_plus
 from functools import cached_property
 from typing import *
-import asyncio
 
 from .request import pget
 from .url import *
@@ -43,8 +42,7 @@ class MALAnimeParser:
 
     @cached_property
     def poster_url(self) -> str:
-        # TODO: fix (returning None currently)
-        return self.page.find('.leftside a img.lazyloaded').eq(0).attr.src
+        return self.page.find('.leftside a img[itemprop="image"]').eq(0).attr['data-src']
 
     @cached_property
     def titles(self) -> str:
@@ -75,10 +73,8 @@ class MALAnimeParser:
     def rating(self):
         return float(self.page.find('[itemprop="ratingValue"]').text())
 
-    def get_int_from_spaceit_pad(self, span_content: str):
-        print(self.page.find(f'.spaceit_pad span:contains("{span_content}")'))
-        print(get_text(self.page.find(f'.spaceit_pad span:contains("{span_content}")')))
-        return int(get_text(self.page.find(f'.spaceit_pad span:contains("{span_content}")')))
+    def get_int_from_spaceit_pad(self, span_content: str, stats_page: bool = False):
+        return int(get_text((self.stats_page if stats_page else self.page).find(f'.spaceit_pad span:contains("{span_content}")')))
 
     @cached_property
     def favorites(self):
@@ -94,23 +90,23 @@ class MALAnimeParser:
 
     @cached_property
     def watching(self):
-        return self.get_int_from_spaceit_pad('Watching:')
+        return self.get_int_from_spaceit_pad('Watching:', stats_page=True)
 
     @cached_property
     def completed(self):
-        return self.get_int_from_spaceit_pad('Completed:')
+        return self.get_int_from_spaceit_pad('Completed:', stats_page=True)
 
     @cached_property
     def plan_to_watch(self):
-        return self.get_int_from_spaceit_pad('Plan to Watch:')
+        return self.get_int_from_spaceit_pad('Plan to Watch:', stats_page=True)
 
     @cached_property
     def dropped(self):
-        return self.get_int_from_spaceit_pad('Dropped:')
+        return self.get_int_from_spaceit_pad('Dropped:', stats_page=True)
 
     @cached_property
     def on_hold(self):
-        return self.get_int_from_spaceit_pad('On-Hold:')
+        return self.get_int_from_spaceit_pad('On-Hold:', stats_page=True)
 
     @cached_property
     def qitems(self):
@@ -146,6 +142,7 @@ def get_text(element) -> str:
         element.parent()
         .clone()
         .remove('span')
+        .remove('sup')
         .text()
         .strip()
         .replace(',', '')

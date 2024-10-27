@@ -6,11 +6,6 @@ def test_mal_valid():
     url_parser = MALUrlParser(url)
     assert url_parser.is_valid()
 
-def test_mal_valid():
-    url = 'https://myanimelist.net/anime/21/One_Piece?q=one%20piece&cat=anime'
-    url_parser = MALUrlParser(url)
-    assert url_parser.is_valid()
-
 def test_mal_invalid():
     url = 'https://shikimori.one/animes/57181-ao-no-hako'
     url_parser = MALUrlParser(url)
@@ -27,6 +22,11 @@ def test_mal_to_shiki():
     url = 'https://myanimelist.net/anime/57181'
     url_parser = MALUrlParser(url)
     assert url_parser.shiki_url == 'https://shikimori.one/animes/57181'
+
+def test_mal_id():
+    url = 'https://myanimelist.net/anime/57181'
+    url_parser = MALUrlParser(url)
+    assert url_parser.mal_id == 57181
 
 def test_shiki_valid():
     url = 'https://shikimori.one/animes/57181-ao-no-hako'

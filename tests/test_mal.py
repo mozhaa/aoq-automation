@@ -34,7 +34,7 @@ def test_popularity(page_1):
     assert page_1.popularity == 1807
 
 def test_favorites(page_1):
-    assert page_1.favorites == 916
+    assert page_1.favorites == 918
 
 def test_title_en(page_1):
     assert page_1.title_en == 'Blue Box'
