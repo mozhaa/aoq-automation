@@ -96,7 +96,8 @@ class Bot:
         try:
             anime, already_in_database = await context.user_data['handler'].add_anime_by_url(url)
 
-            debug_msg = '\n'.join(['{} = {}'.format(key, value) for key, value in anime.__dict__.items()])
+
+            debug_msg = ('\n'.join(['{} = {}'.format(key, value) for key, value in anime.__dict__.items()]))[:1024]
             msg = textwrap.dedent(f'''
                 {'<i>New!</i>' if not already_in_database else ''}
                 

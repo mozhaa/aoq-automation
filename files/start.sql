@@ -38,10 +38,10 @@ CREATE TABLE IF NOT EXISTS QItem(
     anime_id INTEGER REFERENCES Anime(id),
     item_type INTEGER, -- 0 = op, 1 = ed
     num INTEGER,
+    author TEXT, -- manual (id), auto
     song_name TEXT,
     song_artist TEXT,
-    episodes TEXT,
-    state INTEGER
+    episodes TEXT
 );
 
 CREATE TABLE IF NOT EXISTS QItemSource(
@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS QItemSource(
 CREATE TABLE IF NOT EXISTS QItemSourceTiming(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     qitemsource_id INTEGER REFERENCES QItemSource(id),
-    author TEXT, -- manual, auto
+    author TEXT, -- manual (id), auto
     guess_time REAL,
     reveal_time REAL
 );
@@ -63,6 +63,6 @@ CREATE TABLE IF NOT EXISTS QItemSourceTiming(
 CREATE TABLE IF NOT EXISTS QItemDifficulty(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     qitem_id INTEGER REFERENCES QItem(id),
-    author TEXT,
-    value INTEGER -- very easy, easy, medium, hard, very hard
+    author TEXT, -- manual (id), auto
+    value INTEGER -- 10 = very easy, 20 = easy, 30 = medium, 50 = hard, 70 = very hard
 );
