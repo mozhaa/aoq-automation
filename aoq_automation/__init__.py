@@ -1,0 +1,1 @@
+from .tgbot import start
