@@ -10,14 +10,19 @@ anime_page_markup = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="Manage OP & ED")],
         [KeyboardButton(text="Find another anime")],
+        [KeyboardButton(text="Delete this anime")],
         [KeyboardButton(text="Back to menu")],
     ]
 )
 qitem_markup = ReplyKeyboardMarkup(
     keyboard=[
+        [KeyboardButton(text="Edit category"), KeyboardButton(text="Edit number")],
+        [KeyboardButton(text="Edit difficulty"), KeyboardButton(text="Edit source")],
+        [KeyboardButton(text="Edit guess time"), KeyboardButton(text="Edit reveal time")],
         [KeyboardButton(text="Back to OP & ED page")],
         [KeyboardButton(text="Back to Anime page")],
         [KeyboardButton(text="Back to menu")],
+        [KeyboardButton(text="Delete this QItem")],
     ]
 )
 

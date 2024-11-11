@@ -66,7 +66,7 @@ class GetQItems(Preaction):
 
 class AsQItem(Preaction):
     """
-    Interpret message as QItem representation (category + number, f.e. "OP 3") and save it intp state["qitem"]
+    Interpret message as QItem representation (category + number, f.e. "OP 3") and save it into state["qitem"]
     """
 
     async def __call__(self, message: Message, state: FSMContext) -> bool:
