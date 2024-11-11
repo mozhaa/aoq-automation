@@ -44,6 +44,10 @@ async def find_anime(message: Message, state: FSMContext) -> None:
 
 
 def MALUrl(message: Message, **kwargs) -> bool | Dict[str, Any]:
+    """
+    Interpret message as MAL URL, validate it and return MAL URL in consistent format.
+    If it is not valid MAL URL, fail filtering (return False).
+    """
     url = message.text
     url_parser = MALUrlParser(url)
     if url_parser.is_valid():
@@ -52,6 +56,10 @@ def MALUrl(message: Message, **kwargs) -> bool | Dict[str, Any]:
 
 
 async def MALPage(message: Message, mal_url: str, **kwargs) -> bool | Dict[str, Any]:
+    """
+    Take mal_url from arguments, and create MALPageParser object from this URL (validate it as URL to anime page).
+    Return MALPageParser object if it's valid, otherwise fail filtering (return False).
+    """
     page = MALPageParser(mal_url)
     await page.load_pages()
     if not page.valid:
