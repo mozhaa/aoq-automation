@@ -23,8 +23,7 @@ class Chain(Filter):
     ) -> None:
         self.filters = filters
 
-    async def __call__(self, message: Message) -> bool | Dict[str, Any]:
-        kwargs = {}
+    async def __call__(self, message: Message, **kwargs) -> bool | Dict[str, Any]:
         for filter in self.filters:
             new_kwargs = filter(message, **kwargs)
             if iscoroutine(new_kwargs):

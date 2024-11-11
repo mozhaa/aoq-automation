@@ -5,10 +5,10 @@ from aiogram.fsm.state import State, StatesGroup, default_state
 from aiogram.filters import Command
 from aiogram.types import Message
 from aoq_automation.config import Settings
-from aoq_automation.parser import MALPageParser, MALUrlParser
 from typing import *
 from .markups import *
 from .utils import Chain
+from .preactions import *
 
 
 bot = Bot(token=Settings().token)
@@ -43,34 +43,9 @@ async def find_anime(message: Message, state: FSMContext) -> None:
     )
 
 
-def MALUrl(message: Message, **kwargs) -> bool | Dict[str, Any]:
-    """
-    Interpret message as MAL URL, validate it and return MAL URL in consistent format.
-    If it is not valid MAL URL, fail filtering (return False).
-    """
-    url = message.text
-    url_parser = MALUrlParser(url)
-    if url_parser.is_valid():
-        return {"mal_url": url_parser.mal_url}
-    return False
-
-
-async def MALPage(message: Message, mal_url: str, **kwargs) -> bool | Dict[str, Any]:
-    """
-    Take mal_url from arguments, and create MALPageParser object from this URL (validate it as URL to anime page).
-    Return MALPageParser object if it's valid, otherwise fail filtering (return False).
-    """
-    page = MALPageParser(mal_url)
-    await page.load_pages()
-    if not page.valid:
-        return False
-    return {"mal_page": page}
-
-
 @router.message(Form.qitems_page, F.text == "Back to Anime page")
-@router.message(Form.searching_anime, Chain([MALUrl, MALPage]))
-async def anime_page(message: Message, state: FSMContext, **kwargs) -> None:
-    await state.update_data(kwargs)
+@router.message(Form.searching_anime, MALUrl(), MALPage())
+async def anime_page(message: Message, state: FSMContext) -> None:
     await state.set_state(Form.anime_page)
     mal_url = (await state.get_data())["mal_url"]
     await message.answer(
