@@ -54,32 +54,14 @@ async def anime_page(message: Message, state: FSMContext) -> None:
     )
 
 
-async def get_qitems() -> List[str]:
-    # TODO: database query
-    return [
-        "OP 1",
-        "OP 2",
-        "OP 3",
-        "ED 1",
-        "ED 2",
-        "ED 3",
-        "OP 1",
-        "OP 2",
-        "OP 3",
-        "ED 1",
-        "ED 2",
-        "ED 3",
-    ]
-
-
-@router.message(Form.anime_page, F.text == "Manage OP & ED")
+@router.message(Form.anime_page, F.text == "Manage OP & ED", GetQItems())
 async def qitems_page(message: Message, state: FSMContext) -> None:
     await state.set_state(Form.qitems_page)
     state_data = await state.get_data()
     mal_url = state_data["mal_url"]
-    qitems = await get_qitems()
+    qitems = await state.get_value("qitems")
     qitems_keyboard = state_data.get("qitems_keyboard", QItemsKeyboardMarkup(qitems))
-    await state.update_data(qitems=qitems, qitems_keyboard=qitems_keyboard)
+    await state.update_data(qitems_keyboard=qitems_keyboard)
     await message.answer(
         text=f"You're on QItems page! Anime URL: {mal_url}",
         reply_markup=qitems_keyboard.as_markup(),

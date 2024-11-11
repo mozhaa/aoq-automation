@@ -40,3 +40,25 @@ class MALPage(Preaction):
             return False
         await state.update_data(mal_page=page)
         return True
+
+
+class GetQItems(Preaction):
+    async def __call__(self, message: Message, state: FSMContext) -> bool:
+        # TODO: database query
+        qitems = [
+            "OP 1",
+            "OP 2",
+            "OP 3",
+            "ED 1",
+            "ED 2",
+            "ED 3",
+            "OP 1",
+            "OP 2",
+            "OP 3",
+            "ED 1",
+            "ED 2",
+            "ED 3",
+        ]
+        
+        await state.update_data(qitems=qitems)
+        return True
