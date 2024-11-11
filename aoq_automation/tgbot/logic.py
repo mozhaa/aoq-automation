@@ -3,87 +3,18 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup, default_state
 from aiogram.filters import Command
-from aiogram.utils.keyboard import ReplyKeyboardBuilder
-from aiogram.types import (
-    Message,
-    ReplyKeyboardMarkup,
-    KeyboardButton,
-)
-from typing import Dict, Any, Tuple
+from aiogram.types import Message
 from aoq_automation.config import Settings
 from aoq_automation.parser import MALPageParser, MALUrlParser
+from typing import *
+from .markups import *
 from .utils import Chain
-import math
 
 
 bot = Bot(token=Settings().token)
 dp = Dispatcher(storage=MemoryStorage())
 router = Router()
 dp.include_router(router)
-
-default_markup = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="/start")]])
-menu_markup = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="Find anime")]])
-anime_page_markup = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton(text="Manage OP & ED")],
-        [KeyboardButton(text="Find another anime")],
-        [KeyboardButton(text="Back to menu")],
-    ]
-)
-
-
-def build_qitems_page_markup(page: int = 0) -> Tuple[ReplyKeyboardMarkup, int]:
-    qitems_page_markup = ReplyKeyboardBuilder()
-    qitems = [
-        "OP 1",
-        "OP 2",
-        "OP 3",
-        "ED 1",
-        "ED 2",
-        "ED 3",
-        "OP 1",
-        "OP 2",
-        "OP 3",
-        "ED 1",
-        "ED 2",
-        "ED 3",
-    ]
-
-    rows, cols = 2, 5
-    page_size = rows * cols
-    n_pages = math.ceil(len(qitems) / page_size)
-    current_qitems = qitems[page_size * page : page_size * (page + 1)]
-
-    keyboard = [[KeyboardButton(text="-") for _ in range(cols)] for _ in range(rows)]
-    row, col = 0, 0
-    for qitem in current_qitems:
-        keyboard[row][col] = KeyboardButton(text=qitem)
-        col += 1
-        if col >= cols:
-            col = 0
-            row += 1
-
-    qitems_page_markup.attach(
-        ReplyKeyboardBuilder.from_markup(ReplyKeyboardMarkup(keyboard=keyboard))
-    )
-    qitems_page_markup.adjust(*([cols] * rows))
-
-    qitems_page_markup.attach(
-        ReplyKeyboardBuilder.from_markup(
-            markup=ReplyKeyboardMarkup(
-                keyboard=[
-                    [
-                        KeyboardButton(text="Previous page"),
-                        KeyboardButton(text="Next page"),
-                    ],
-                    [KeyboardButton(text="Add new")],
-                    [KeyboardButton(text="Back to Anime page")],
-                    [KeyboardButton(text="Back to menu")],
-                ]
-            )
-        )
-    )
-    return qitems_page_markup.as_markup(), n_pages
 
 
 class Form(StatesGroup):
@@ -140,43 +71,51 @@ async def anime_page(message: Message, state: FSMContext, **kwargs) -> None:
     )
 
 
+async def get_qitems() -> List[str]:
+    # TODO: database query
+    return [
+        "OP 1",
+        "OP 2",
+        "OP 3",
+        "ED 1",
+        "ED 2",
+        "ED 3",
+        "OP 1",
+        "OP 2",
+        "OP 3",
+        "ED 1",
+        "ED 2",
+        "ED 3",
+    ]
+
+
 @router.message(Form.anime_page, F.text == "Manage OP & ED")
 async def qitems_page(message: Message, state: FSMContext) -> None:
     await state.set_state(Form.qitems_page)
     state_data = await state.get_data()
     mal_url = state_data["mal_url"]
-    page = state_data.get("page", 0)
-    markup, n_pages = build_qitems_page_markup(page)
-    await state.update_data(n_pages=n_pages)
+    qitems = await get_qitems()
+    qitems_keyboard = state_data.get("qitems_keyboard", QItemsKeyboardMarkup(qitems))
+    await state.update_data(qitems=qitems, qitems_keyboard=qitems_keyboard)
     await message.answer(
         text=f"You're on QItems page! Anime URL: {mal_url}",
-        reply_markup=markup,
+        reply_markup=qitems_keyboard.as_markup(),
     )
 
 
 @router.message(Form.qitems_page, F.text == "Next page")
 async def qitems_page_next_page(message: Message, state: FSMContext) -> None:
-    page_num = max(
-        0,
-        min(
-            await state.get_value("n_pages", 0) - 1,
-            await state.get_value("page", 0) + 1,
-        ),
-    )
-    await state.update_data(page=page_num)
+    qitems_keyboard = await state.get_value("qitems_keyboard")
+    qitems_keyboard.next_page()
+    await state.update_data(qitems_keyboard=qitems_keyboard)
     return await qitems_page(message, state)
 
 
 @router.message(Form.qitems_page, F.text == "Previous page")
 async def qitems_page_previous_page(message: Message, state: FSMContext) -> None:
-    page_num = max(
-        0,
-        min(
-            await state.get_value("n_pages", 0) - 1,
-            await state.get_value("page", 0) - 1,
-        ),
-    )
-    await state.update_data(page=page_num)
+    qitems_keyboard = await state.get_value("qitems_keyboard")
+    qitems_keyboard.previous_page()
+    await state.update_data(qitems_keyboard=qitems_keyboard)
     return await qitems_page(message, state)
 
 
