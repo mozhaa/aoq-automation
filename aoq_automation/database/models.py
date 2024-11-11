@@ -1,4 +1,4 @@
-from sqlalchemy import BigInteger, Integer, Text, ForeignKey, String
+from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.schema import CreateTable
 from database import Base
@@ -40,6 +40,7 @@ class QItem(Base):
     difficulties: Mapped[List["QItemDifficulty"]] = relationship(
         back_populates="qitem_difficulty", cascade="all, delete-orphan"
     )
+    __table_args__ = (UniqueConstraint("category", "number", "_category_number_uc"),)
 
 
 class QItemSource(Base):
@@ -92,19 +93,19 @@ class PAnimeMAL(Base):
     url: Mapped[str]
     title_en: Mapped[str]
     poster_url: Mapped[str]
-    
+
     rating: Mapped[float]
     ratings_count: Mapped[int]
     favorites: Mapped[int]
     popularity: Mapped[int]
     ranked: Mapped[int]
-    
+
     plan_to_watch: Mapped[int]
     completed: Mapped[int]
     watching: Mapped[int]
     dropped: Mapped[int]
     on_hold: Mapped[int]
-    
+
     anime: Mapped["Anime"] = relationship(back_populates="anime")
 
 
@@ -114,23 +115,23 @@ class PAnimeShiki(Base):
     __tablename__ = "p_anime_shiki"
 
     anime_id: Mapped[int] = mapped_column(ForeignKey("anime.id"))
-    
+
     url: Mapped[str]
     title_ru: Mapped[str]
     poster_url: Mapped[str]
     poster_thumb_url: Mapped[str]
-    
+
     rating: Mapped[float]
     ratings_count: Mapped[int]
     favorites: Mapped[int]
     comments: Mapped[int]
-    
+
     plan_to_watch: Mapped[int]
     completed: Mapped[int]
     watching: Mapped[int]
     dropped: Mapped[int]
     on_hold: Mapped[int]
-    
+
     anime: Mapped["Anime"] = relationship(back_populates="anime")
 
 
@@ -140,27 +141,27 @@ class PAnimeAniDB(Base):
     __tablename__ = "p_anime_anidb"
 
     anime_id: Mapped[int] = mapped_column(ForeignKey("anime.id"))
-    
+
     url: Mapped[str]
     airing_start: Mapped[datetime]
     airing_end: Mapped[datetime]
-    
+
     anime: Mapped["Anime"] = relationship(back_populates="anime")
 
 
 class PQItemAniDB(Base):
     """Parsed Quiz Item information from AniDB"""
-    
+
     __tablename__ = "p_qitem_anidb"
-    
+
     qitem_id: Mapped[int] = mapped_column(ForeignKey("qitem.id"))
-    
+
     url: Mapped[str]
     main_title: Mapped[str]
     official_name: Mapped[str]
     performer: Mapped[str]
     rating_value: Mapped[float]
-    
+
     qitem: Mapped["QItem"] = relationship(back_populates="qitem")
 
 
