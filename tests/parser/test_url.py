@@ -1,4 +1,4 @@
-from aoq_automation.parser.url import MALUrlParser
+from aoq_automation.parser import MALUrlParser
 
 
 def test_mal_valid():

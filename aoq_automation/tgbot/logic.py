@@ -2,16 +2,17 @@ from aiogram import Bot, Dispatcher, Router, F
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup, default_state
-from aiogram.filters import Command, Filter
+from aiogram.filters import Command
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from aiogram.types import (
     Message,
     ReplyKeyboardMarkup,
     KeyboardButton,
 )
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from aoq_automation.config import Settings
-from aoq_automation.parser.url import MALUrlParser
+from aoq_automation.parser import MALPageParser, MALUrlParser
+from .utils import Chain
 
 
 bot = Bot(token=Settings().token)
@@ -90,7 +91,7 @@ async def find_anime(message: Message, state: FSMContext) -> None:
     )
 
 
-def MALUrl(message: Message) -> bool | Dict[str, Any]:
+def MALUrl(message: Message, **kwargs) -> bool | Dict[str, Any]:
     url = message.text
     url_parser = MALUrlParser(url)
     if url_parser.is_valid():
@@ -98,8 +99,16 @@ def MALUrl(message: Message) -> bool | Dict[str, Any]:
     return False
 
 
+async def MALPage(message: Message, mal_url: str, **kwargs) -> bool | Dict[str, Any]:
+    page = MALPageParser(mal_url)
+    await page.load_pages()
+    if not page.valid:
+        return False
+    return {"mal_page": page}
+
+
 @router.message(Form.qitems_page, F.text == "Back to Anime page")
-@router.message(Form.searching_anime, MALUrl)
+@router.message(Form.searching_anime, Chain([MALUrl, MALPage]))
 async def anime_page(message: Message, state: FSMContext, **kwargs) -> None:
     await state.update_data(kwargs)
     await state.set_state(Form.anime_page)
