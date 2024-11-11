@@ -3,6 +3,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.filters import Command, Filter
+from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from aiogram.types import (
     Message,
     ReplyKeyboardMarkup,
@@ -27,12 +28,40 @@ anime_page_markup = ReplyKeyboardMarkup(
         [KeyboardButton(text="Back to menu")],
     ]
 )
-qitems_page_markup = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton(text="Back to Anime page")],
-        [KeyboardButton(text="Back to menu")],
-    ]
-)
+
+
+def build_qitems_page_markup(page: int = 0) -> ReplyKeyboardMarkup:
+    qitems_page_markup = ReplyKeyboardBuilder()
+    qitems = ["OP 1", "OP 2", "OP 3", "ED 1", "ED 2", "ED 3"]
+    page_limit = 10
+    rows, cols = 2, 5
+    current_qitems = qitems[page_limit * page : page_limit * (page + 1)]
+
+    keyboard = [[KeyboardButton(text="-") for _ in range(cols)] for _ in range(rows)]
+    row, col = 0, 0
+    for qitem in current_qitems:
+        keyboard[row][col] = KeyboardButton(text=qitem)
+        col += 1
+        if col >= cols:
+            col = 0
+            row += 1
+
+    qitems_page_markup.attach(
+        ReplyKeyboardBuilder.from_markup(ReplyKeyboardMarkup(keyboard=keyboard))
+    )
+    qitems_page_markup.adjust(*([cols] * rows))
+
+    qitems_page_markup.attach(
+        ReplyKeyboardBuilder.from_markup(
+            markup=ReplyKeyboardMarkup(
+                keyboard=[
+                    [KeyboardButton(text="Back to Anime page")],
+                    [KeyboardButton(text="Back to menu")],
+                ]
+            )
+        )
+    )
+    return qitems_page_markup.as_markup()
 
 
 class Form(StatesGroup):
@@ -67,6 +96,7 @@ def MALUrl(message: Message) -> bool | Dict[str, Any]:
         return {"mal_url": url_parser.mal_url}
     return False
 
+
 @router.message(Form.qitems_page, F.text == "Back to Anime page")
 @router.message(Form.searching_anime, MALUrl)
 async def anime_page(
@@ -84,7 +114,7 @@ async def qitems_page(message: Message, state: FSMContext) -> None:
     await state.set_state(Form.qitems_page)
     await message.answer(
         text="You're on QItems page!",
-        reply_markup=qitems_page_markup,
+        reply_markup=build_qitems_page_markup(0),
     )
 
 
