@@ -9,10 +9,11 @@ from aiogram.types import (
     ReplyKeyboardMarkup,
     KeyboardButton,
 )
-from typing import Dict, Any
+from typing import Dict, Any, Tuple
 from aoq_automation.config import Settings
 from aoq_automation.parser import MALPageParser, MALUrlParser
 from .utils import Chain
+import math
 
 
 bot = Bot(token=Settings().token)
@@ -31,10 +32,11 @@ anime_page_markup = ReplyKeyboardMarkup(
 )
 
 
-def build_qitems_page_markup(page: int = 0) -> ReplyKeyboardMarkup:
+def build_qitems_page_markup(page: int = 0) -> Tuple[ReplyKeyboardMarkup, int]:
     qitems_page_markup = ReplyKeyboardBuilder()
-    qitems = ["OP 1", "OP 2", "OP 3", "ED 1", "ED 2", "ED 3"]
+    qitems = ["OP 1", "OP 2", "OP 3", "ED 1", "ED 2", "ED 3", "OP 1", "OP 2", "OP 3", "ED 1", "ED 2", "ED 3"]
     page_limit = 10
+    n_pages = math.ceil(len(qitems) / page_limit)
     rows, cols = 2, 5
     current_qitems = qitems[page_limit * page : page_limit * (page + 1)]
 
@@ -56,13 +58,18 @@ def build_qitems_page_markup(page: int = 0) -> ReplyKeyboardMarkup:
         ReplyKeyboardBuilder.from_markup(
             markup=ReplyKeyboardMarkup(
                 keyboard=[
+                    [
+                        KeyboardButton(text="Previous page"),
+                        KeyboardButton(text="Next page"),
+                    ],
+                    [KeyboardButton(text="Add new")],
                     [KeyboardButton(text="Back to Anime page")],
                     [KeyboardButton(text="Back to menu")],
                 ]
             )
         )
     )
-    return qitems_page_markup.as_markup()
+    return qitems_page_markup.as_markup(), n_pages
 
 
 class Form(StatesGroup):
@@ -122,11 +129,29 @@ async def anime_page(message: Message, state: FSMContext, **kwargs) -> None:
 @router.message(Form.anime_page, F.text == "Manage OP & ED")
 async def qitems_page(message: Message, state: FSMContext) -> None:
     await state.set_state(Form.qitems_page)
-    mal_url = (await state.get_data())["mal_url"]
+    state_data = await state.get_data()
+    mal_url = state_data["mal_url"]
+    page = state_data.get("page", 0)
+    markup, n_pages = build_qitems_page_markup(page)
+    await state.update_data(n_pages=n_pages)
     await message.answer(
         text=f"You're on QItems page! Anime URL: {mal_url}",
-        reply_markup=build_qitems_page_markup(0),
+        reply_markup=markup,
     )
+
+
+@router.message(Form.qitems_page, F.text == "Next page")
+async def qitems_page_next_page(message: Message, state: FSMContext) -> None:
+    page_num = max(0, min(await state.get_value("n_pages", 0) - 1, await state.get_value("page", 0) + 1))
+    await state.update_data(page=page_num)
+    return await qitems_page(message, state)
+
+
+@router.message(Form.qitems_page, F.text == "Previous page")
+async def qitems_page_previous_page(message: Message, state: FSMContext) -> None:
+    page_num = max(0, min(await state.get_value("n_pages", 0) - 1, await state.get_value("page", 0) - 1))
+    await state.update_data(page=page_num)
+    return await qitems_page(message, state)
 
 
 @router.message(Form.menu)
