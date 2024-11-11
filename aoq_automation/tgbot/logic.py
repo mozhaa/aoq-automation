@@ -1,7 +1,7 @@
 from aiogram import Bot, Dispatcher, Router, F
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.state import State, StatesGroup, default_state
 from aiogram.filters import Command, Filter
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from aiogram.types import (
@@ -75,6 +75,7 @@ class Form(StatesGroup):
 @router.message(Form.anime_page, F.text == "Back to menu")
 @router.message(Form.qitems_page, F.text == "Back to menu")
 async def command_start(message: Message, state: FSMContext) -> None:
+    await state.clear()
     await state.set_state(Form.menu)
     await message.answer(text="What do you want to do?", reply_markup=menu_markup)
 
@@ -99,12 +100,12 @@ def MALUrl(message: Message) -> bool | Dict[str, Any]:
 
 @router.message(Form.qitems_page, F.text == "Back to Anime page")
 @router.message(Form.searching_anime, MALUrl)
-async def anime_page(
-    message: Message, state: FSMContext, mal_url: Optional[str] = None
-) -> None:
+async def anime_page(message: Message, state: FSMContext, **kwargs) -> None:
+    await state.update_data(kwargs)
     await state.set_state(Form.anime_page)
+    mal_url = (await state.get_data())["mal_url"]
     await message.answer(
-        text="You're on anime page!",
+        text=f"You're on anime page! URL: {mal_url}",
         reply_markup=anime_page_markup,
     )
 
@@ -112,8 +113,9 @@ async def anime_page(
 @router.message(Form.anime_page, F.text == "Manage OP & ED")
 async def qitems_page(message: Message, state: FSMContext) -> None:
     await state.set_state(Form.qitems_page)
+    mal_url = (await state.get_data())["mal_url"]
     await message.answer(
-        text="You're on QItems page!",
+        text=f"You're on QItems page! Anime URL: {mal_url}",
         reply_markup=build_qitems_page_markup(0),
     )
 
@@ -128,3 +130,8 @@ async def invalid_menu_option(message: Message, state: FSMContext) -> None:
 @router.message(Form.searching_anime)
 async def invalid_anime_query(message: Message, state: FSMContext) -> None:
     await message.reply(text=f"Invalid MAL URL, try again")
+
+
+@router.message(default_state)
+async def no_state(message: Message, state: FSMContext) -> None:
+    await message.reply(text=f"Click /start to enter menu", reply_markup=default_markup)
