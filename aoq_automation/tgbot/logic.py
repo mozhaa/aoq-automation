@@ -22,7 +22,14 @@ default_markup = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="/start")]])
 menu_markup = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="Find anime")]])
 anime_page_markup = ReplyKeyboardMarkup(
     keyboard=[
+        [KeyboardButton(text="Manage OP & ED")],
         [KeyboardButton(text="Find another anime")],
+        [KeyboardButton(text="Back to menu")],
+    ]
+)
+qitems_page_markup = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="Back to Anime page")],
         [KeyboardButton(text="Back to menu")],
     ]
 )
@@ -32,20 +39,22 @@ class Form(StatesGroup):
     menu = State()
     searching_anime = State()
     anime_page = State()
+    qitems_page = State()
 
 
 @router.message(Command("start"))
 @router.message(Form.anime_page, F.text == "Back to menu")
+@router.message(Form.qitems_page, F.text == "Back to menu")
 async def command_start(message: Message, state: FSMContext) -> None:
     await state.set_state(Form.menu)
-    await message.reply(text="What do you want to do?", reply_markup=menu_markup)
+    await message.answer(text="What do you want to do?", reply_markup=menu_markup)
 
 
 @router.message(Form.menu, F.text == "Find anime")
 @router.message(Form.anime_page, F.text == "Find another anime")
 async def find_anime(message: Message, state: FSMContext) -> None:
     await state.set_state(Form.searching_anime)
-    await message.reply(
+    await message.answer(
         text="Please enter anime URL on MyAnimeList (myanimelist.net)",
         reply_markup=default_markup,
     )
@@ -58,20 +67,30 @@ def MALUrl(message: Message) -> bool | Dict[str, Any]:
         return {"mal_url": url_parser.mal_url}
     return False
 
-
+@router.message(Form.qitems_page, F.text == "Back to Anime page")
 @router.message(Form.searching_anime, MALUrl)
 async def anime_page(
     message: Message, state: FSMContext, mal_url: Optional[str] = None
 ) -> None:
     await state.set_state(Form.anime_page)
-    await message.reply(
+    await message.answer(
         text="You're on anime page!",
         reply_markup=anime_page_markup,
     )
 
 
+@router.message(Form.anime_page, F.text == "Manage OP & ED")
+async def qitems_page(message: Message, state: FSMContext) -> None:
+    await state.set_state(Form.qitems_page)
+    await message.answer(
+        text="You're on QItems page!",
+        reply_markup=qitems_page_markup,
+    )
+
+
 @router.message(Form.menu)
 @router.message(Form.anime_page)
+@router.message(Form.qitems_page)
 async def invalid_menu_option(message: Message, state: FSMContext) -> None:
     await message.reply(text=f"No such option: {message.text}")
 
