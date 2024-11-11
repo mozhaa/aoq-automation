@@ -34,11 +34,25 @@ anime_page_markup = ReplyKeyboardMarkup(
 
 def build_qitems_page_markup(page: int = 0) -> Tuple[ReplyKeyboardMarkup, int]:
     qitems_page_markup = ReplyKeyboardBuilder()
-    qitems = ["OP 1", "OP 2", "OP 3", "ED 1", "ED 2", "ED 3", "OP 1", "OP 2", "OP 3", "ED 1", "ED 2", "ED 3"]
-    page_limit = 10
-    n_pages = math.ceil(len(qitems) / page_limit)
+    qitems = [
+        "OP 1",
+        "OP 2",
+        "OP 3",
+        "ED 1",
+        "ED 2",
+        "ED 3",
+        "OP 1",
+        "OP 2",
+        "OP 3",
+        "ED 1",
+        "ED 2",
+        "ED 3",
+    ]
+
     rows, cols = 2, 5
-    current_qitems = qitems[page_limit * page : page_limit * (page + 1)]
+    page_size = rows * cols
+    n_pages = math.ceil(len(qitems) / page_size)
+    current_qitems = qitems[page_size * page : page_size * (page + 1)]
 
     keyboard = [[KeyboardButton(text="-") for _ in range(cols)] for _ in range(rows)]
     row, col = 0, 0
@@ -142,14 +156,26 @@ async def qitems_page(message: Message, state: FSMContext) -> None:
 
 @router.message(Form.qitems_page, F.text == "Next page")
 async def qitems_page_next_page(message: Message, state: FSMContext) -> None:
-    page_num = max(0, min(await state.get_value("n_pages", 0) - 1, await state.get_value("page", 0) + 1))
+    page_num = max(
+        0,
+        min(
+            await state.get_value("n_pages", 0) - 1,
+            await state.get_value("page", 0) + 1,
+        ),
+    )
     await state.update_data(page=page_num)
     return await qitems_page(message, state)
 
 
 @router.message(Form.qitems_page, F.text == "Previous page")
 async def qitems_page_previous_page(message: Message, state: FSMContext) -> None:
-    page_num = max(0, min(await state.get_value("n_pages", 0) - 1, await state.get_value("page", 0) - 1))
+    page_num = max(
+        0,
+        min(
+            await state.get_value("n_pages", 0) - 1,
+            await state.get_value("page", 0) - 1,
+        ),
+    )
     await state.update_data(page=page_num)
     return await qitems_page(message, state)
 
