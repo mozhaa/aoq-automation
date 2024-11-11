@@ -13,6 +13,13 @@ anime_page_markup = ReplyKeyboardMarkup(
         [KeyboardButton(text="Back to menu")],
     ]
 )
+qitem_markup = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="Back to OP & ED page")],
+        [KeyboardButton(text="Back to Anime page")],
+        [KeyboardButton(text="Back to menu")],
+    ]
+)
 
 
 class QItemsKeyboardMarkup:

@@ -7,7 +7,6 @@ from aiogram.types import Message
 from aoq_automation.config import Settings
 from typing import *
 from .markups import *
-from .utils import Chain
 from .preactions import *
 
 
@@ -22,11 +21,13 @@ class Form(StatesGroup):
     searching_anime = State()
     anime_page = State()
     qitems_page = State()
+    qitem_page = State()
 
 
 @router.message(Command("start"))
 @router.message(Form.anime_page, F.text == "Back to menu")
 @router.message(Form.qitems_page, F.text == "Back to menu")
+@router.message(Form.qitem_page, F.text == "Back to menu")
 async def command_start(message: Message, state: FSMContext) -> None:
     await state.clear()
     await state.set_state(Form.menu)
@@ -43,8 +44,9 @@ async def find_anime(message: Message, state: FSMContext) -> None:
     )
 
 
+@router.message(Form.searching_anime, AsMALUrl(), AsMALPage())
 @router.message(Form.qitems_page, F.text == "Back to Anime page")
-@router.message(Form.searching_anime, MALUrl(), MALPage())
+@router.message(Form.qitem_page, F.text == "Back to Anime page")
 async def anime_page(message: Message, state: FSMContext) -> None:
     await state.set_state(Form.anime_page)
     mal_url = (await state.get_data())["mal_url"]
@@ -55,6 +57,7 @@ async def anime_page(message: Message, state: FSMContext) -> None:
 
 
 @router.message(Form.anime_page, F.text == "Manage OP & ED", GetQItems())
+@router.message(Form.qitem_page, F.text == "Back to OP & ED page")
 async def qitems_page(message: Message, state: FSMContext) -> None:
     await state.set_state(Form.qitems_page)
     state_data = await state.get_data()
@@ -82,6 +85,16 @@ async def qitems_page_previous_page(message: Message, state: FSMContext) -> None
     qitems_keyboard.previous_page()
     await state.update_data(qitems_keyboard=qitems_keyboard)
     return await qitems_page(message, state)
+
+
+@router.message(Form.qitems_page, AsQItem())
+async def qitem_page(message: Message, state: FSMContext) -> None:
+    await state.set_state(Form.qitem_page)
+    qitem = await state.get_value("qitem")
+    await message.answer(
+        text=f"You're on QItem page: {qitem}",
+        reply_markup=qitem_markup,
+    )
 
 
 @router.message(Form.menu)

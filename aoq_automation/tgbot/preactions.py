@@ -11,7 +11,7 @@ class Preaction(Filter):
     async def __call__(self, message: Message, state: FSMContext, **kwargs) -> bool: ...
 
 
-class MALUrl(Preaction):
+class AsMALUrl(Preaction):
     """
     Interpret message as MAL URL, validate it and save MAL URL in consistent format into state["mal_url"].
     If it is not valid MAL URL, fail filtering (return False).
@@ -26,7 +26,7 @@ class MALUrl(Preaction):
         return True
 
 
-class MALPage(Preaction):
+class AsMALPage(Preaction):
     """
     Take mal_url from FSMContext, and create MALPageParser object from this URL (validate it as URL to anime page).
     Pass if it's valid, otherwise fail filtering (return False).
@@ -59,6 +59,20 @@ class GetQItems(Preaction):
             "ED 2",
             "ED 3",
         ]
-        
+
         await state.update_data(qitems=qitems)
+        return True
+
+
+class AsQItem(Preaction):
+    """
+    Interpret message as QItem representation (category + number, f.e. "OP 3") and save it intp state["qitem"]
+    """
+
+    async def __call__(self, message: Message, state: FSMContext) -> bool:
+        qitems = await state.get_value("qitems")
+        qitem = message.text
+        if qitem not in qitems:
+            return False
+        await state.update_data(qitem=qitem)
         return True
