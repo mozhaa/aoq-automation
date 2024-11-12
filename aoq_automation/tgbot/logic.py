@@ -8,12 +8,18 @@ from aoq_automation.config import Settings
 from typing import *
 from .markups import *
 from .preactions import *
+from .utils import ValueInput
 
 
 bot = Bot(token=Settings().token)
 dp = Dispatcher(storage=MemoryStorage())
 router = Router()
 dp.include_router(router)
+
+
+# Router for handling updates, that didn't pass any filters
+# It must be last router to be chained to dispatcher
+fallback_router = Router()
 
 
 class Form(StatesGroup):
@@ -34,17 +40,6 @@ async def command_start(message: Message, state: FSMContext) -> None:
     await message.answer(text="What do you want to do?", reply_markup=menu_markup)
 
 
-@router.message(Form.menu, F.text == "Find anime")
-@router.message(Form.anime_page, F.text == "Find another anime")
-async def find_anime(message: Message, state: FSMContext) -> None:
-    await state.set_state(Form.searching_anime)
-    await message.answer(
-        text="Please enter anime URL on MyAnimeList (myanimelist.net)",
-        reply_markup=default_markup,
-    )
-
-
-@router.message(Form.searching_anime, AsMALUrl(), AsMALPage())
 @router.message(Form.qitems_page, F.text == "Back to Anime page")
 @router.message(Form.qitem_page, F.text == "Back to Anime page")
 async def anime_page(message: Message, state: FSMContext) -> None:
@@ -54,6 +49,23 @@ async def anime_page(message: Message, state: FSMContext) -> None:
         text=f"You're on anime page! URL: {mal_url}",
         reply_markup=anime_page_markup,
     )
+
+
+r, fr = ValueInput(
+    key="mal_url",
+    state=Form.searching_anime,
+    on_exit=anime_page,
+    enter_filters=[
+        [Form.menu, F.text == "Find anime"],
+        [Form.anime_page, F.text == "Find another anime"],
+    ],
+    validation_filters=[
+        [AsMALUrl(), AsMALPage()],
+    ],
+).as_routers()
+
+router.include_router(r)
+fallback_router.include_router(fr)
 
 
 @router.message(Form.anime_page, F.text == "Manage OP & ED", GetQItems())
@@ -97,18 +109,16 @@ async def qitem_page(message: Message, state: FSMContext) -> None:
     )
 
 
-@router.message(Form.menu)
-@router.message(Form.anime_page)
-@router.message(Form.qitems_page)
+@fallback_router.message(Form.menu)
+@fallback_router.message(Form.anime_page)
+@fallback_router.message(Form.qitems_page)
 async def invalid_menu_option(message: Message, state: FSMContext) -> None:
     await message.reply(text=f"No such option: {message.text}")
 
 
-@router.message(Form.searching_anime)
-async def invalid_anime_query(message: Message, state: FSMContext) -> None:
-    await message.reply(text=f"Invalid MAL URL, try again")
-
-
-@router.message(default_state)
+@fallback_router.message(default_state)
 async def no_state(message: Message, state: FSMContext) -> None:
     await message.reply(text=f"Click /start to enter menu", reply_markup=default_markup)
+
+
+dp.include_router(fallback_router)
