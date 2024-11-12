@@ -8,7 +8,7 @@ from aoq_automation.config import Settings
 from typing import *
 from .markups import *
 from .preactions import *
-from .utils import ValueInput
+from .utils import Survey, SurveyQuestion
 
 
 bot = Bot(token=Settings().token)
@@ -34,7 +34,7 @@ class Form(StatesGroup):
 @router.message(Form.anime_page, F.text == "Back to menu")
 @router.message(Form.qitems_page, F.text == "Back to menu")
 @router.message(Form.qitem_page, F.text == "Back to menu")
-async def command_start(message: Message, state: FSMContext) -> None:
+async def menu(message: Message, state: FSMContext) -> None:
     await state.clear()
     await state.set_state(Form.menu)
     await message.answer(text="What do you want to do?", reply_markup=menu_markup)
@@ -51,16 +51,21 @@ async def anime_page(message: Message, state: FSMContext) -> None:
     )
 
 
-r, fr = ValueInput(
-    key="mal_url",
+r, fr = Survey(
+    questions=[
+        SurveyQuestion(
+            key="mal_url",
+            filterset=[
+                [AsMALUrl(), AsMALPage()],
+            ],
+        ),
+    ],
     state=Form.searching_anime,
     on_exit=anime_page,
+    on_cancel=menu,
     enter_filters=[
         [Form.menu, F.text == "Find anime"],
         [Form.anime_page, F.text == "Find another anime"],
-    ],
-    validation_filters=[
-        [AsMALUrl(), AsMALPage()],
     ],
 ).as_routers()
 

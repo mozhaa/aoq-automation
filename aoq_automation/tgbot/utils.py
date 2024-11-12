@@ -6,38 +6,125 @@ from typing import Optional, Tuple
 from aiogram.fsm.state import State
 from aiogram import Router, F
 from aiogram.dispatcher.event.handler import CallableObject, CallbackType
+from aiogram.dispatcher.event.telegram import TelegramEventObserver
+from dataclasses import dataclass
+from functools import partial
 
 
 class StateValue(Filter):
-    def __init__(self, key: str, value: Any) -> None:
+    def __init__(self, key: str, value: Any, default_value: Any = None) -> None:
         self.key = key
         self.value = value
+        self.default_value = default_value
 
     async def __call__(self, message: Message, state: FSMContext) -> bool:
-        return await state.get_value(self.key, None) == self.value
+        return await state.get_value(self.key, self.default_value) == self.value
 
 
-class ValueInput:
+class RouterBuilder:
+    def as_routers(self) -> Tuple[Router, Router]: ...
+
+
+class Filterset:
+    """
+    Set of filters in disjunctive normal form
+    """
+
+    def __init__(self, filters: List[List[Filter]]) -> None:
+        self._table = filters
+
+    def register(
+        self,
+        observer: TelegramEventObserver,
+        callback: CallbackType,
+        appendix: List[Filter] = [],
+    ) -> None:
+        for filter_set in self._table:
+            observer.register(callback, *(appendix + filter_set))
+
+    @property
+    def empty(self) -> bool:
+        return len(self._table) == 0
+
+
+@dataclass
+class SurveyQuestion:
+    """
+    Question class for Survey.
+
+    key - string, that will be used as a key for storing value in FSMContext after correct input
+    filters - filters in disjunctive normal form
+    welcome_message - string with optional placeholder {key}
+    invalidation_message - string with optional placeholders {key} and {response}
+    keyboard_markup - optional ReplyKeyboardMarkup
+    """
+
+    key: str
+    filterset: Filterset | List[List[Filter]]
+    welcome_message: str = "Enter value for {key}"
+    invalidation_message: str = '"{response}" is invalid value for {key}, try again'
+    keyboard_markup: Optional[ReplyKeyboardMarkup] = None
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.filterset, Filterset):
+            self.filterset = Filterset(self.filterset)
+
+
+class Survey(RouterBuilder):
+    step_key: str = "_survey_step"
+
     def __init__(
         self,
-        key: str,
+        questions: List[SurveyQuestion],
         on_exit: CallbackType,
+        on_cancel: Optional[CallbackType] = None,
         state: Optional[State] = None,
-        enter_filters: List[List[Filter]] = [[]],
-        validation_filters: List[List[Filter]] = [[]],
-        enter_message: str = "Enter value for {key}",
-        invalid_message: str = '"{response}" is invalid value for {key}, try again',
-        keyboard_markup: Optional[ReplyKeyboardMarkup] = None,
+        enter_filters: Filterset | List[List[Filter]] = [[]],
+        cancel_filters: Filterset | List[List[Filter]] = [[F.text == "/cancel"]],
     ) -> None:
-        self.key = key
+        self.questions = questions
+
+        # CallableObject, that will be called when last question will be answered
         self.on_exit = CallableObject(on_exit)
+
+        # CallableObject, that will be called on triggering cancel_filters
+        self.on_cancel = CallableObject(on_cancel)
+
+        # State, that will be used during whole Survey
         self.state = state
-        self.enter_filters = enter_filters
-        self.validation_filters = validation_filters
-        self.state_key = f"{self.key}_input_state"
-        self.enter_message = enter_message
-        self.invalid_message = invalid_message
-        self.keyboard_markup = keyboard_markup
+
+        # Filter set, that triggers this survey to start
+        self.enter_filterset = (
+            enter_filters
+            if isinstance(enter_filters, Filterset)
+            else Filterset(enter_filters)
+        )
+
+        # Filter set, that triggers this survey to cancel in the middle
+        self.cancel_filterset = (
+            cancel_filters
+            if isinstance(cancel_filters, Filterset)
+            else Filterset(cancel_filters)
+        )
+
+        if self.on_cancel is None and not self.cancel_filterset.empty():
+            raise ValueError()
+
+    async def _send_welcome_message(self, message: Message, step: int) -> None:
+        await message.answer(
+            text=self.questions[step].welcome_message.format(
+                key=self.questions[step].key
+            ),
+            reply_markup=self.questions[step].keyboard_markup,
+        )
+
+    async def _send_invalidation_message(self, message: Message, step: int) -> None:
+        await message.reply(
+            text=self.questions[step].invalidation_message.format(
+                response=message.text, key=self.questions[step].key
+            ),
+            reply_markup=self.questions[step].keyboard_markup,
+        )
 
     def as_routers(self) -> Tuple[Router, Router]:
         """
@@ -49,38 +136,49 @@ class ValueInput:
         fr = Router()
 
         async def on_enter(message: Message, state: FSMContext) -> None:
-            await message.answer(
-                text=self.enter_message.format(response=message.text, key=self.key),
-                reply_markup=self.keyboard_markup,
-            )
+            await self._send_welcome_message(message, 0)
             if self.state is not None:
                 await state.set_state(self.state)
-            await state.update_data({self.state_key: True})
+            await state.update_data({self.step_key: 0})
 
-        for enter_filters_set in self.enter_filters:
-            r.message.register(
-                on_enter, StateValue(self.state_key, None), *enter_filters_set
-            )
+        async def on_cancel(message: Message, state: FSMContext, **kwargs) -> None:
+            await self.on_cancel.call(message, state, **kwargs)
 
         async def on_correct_input(
-            message: Message, state: FSMContext, **kwargs
+            step: int, message: Message, state: FSMContext, **kwargs
         ) -> None:
-            await state.update_data({self.state_key: None})
-            await self.on_exit.call(message, state, **kwargs)
+            await state.update_data({question.key: message.text})
+            if step == len(self.questions) - 1:
+                await state.update_data({self.step_key: None})
+                await self.on_exit.call(message, state, **kwargs)
+            else:
+                await state.update_data({self.step_key: step + 1})
+                await self._send_welcome_message(message, step + 1)
 
-        for validation_filters_set in self.validation_filters:
-            r.message.register(
-                on_correct_input,
-                StateValue(self.state_key, True),
-                *validation_filters_set,
+        async def on_invalid_input(
+            step: int, message: Message, state: FSMContext
+        ) -> None:
+            await self._send_invalidation_message(message, step)
+
+        self.enter_filterset.register(
+            r.message, on_enter, [StateValue(self.step_key, None)]
+        )
+
+        self.cancel_filterset.register(
+            r.message, on_cancel, [~StateValue(self.step_key, None)]
+        )
+
+        for step, question in enumerate(self.questions):
+            # Step-dependant handlers
+
+            question.filterset.register(
+                r.message,
+                partial(on_correct_input, step),
+                [StateValue(self.step_key, step)],
             )
 
-        async def on_invalid_input(message: Message, state: FSMContext) -> None:
-            await message.reply(
-                text=self.invalid_message.format(response=message.text, key=self.key),
-                reply_markup=self.keyboard_markup,
+            fr.message.register(
+                partial(on_invalid_input, step), StateValue(self.step_key, step)
             )
-
-        fr.message.register(on_invalid_input, StateValue(self.state_key, True))
 
         return r, fr
