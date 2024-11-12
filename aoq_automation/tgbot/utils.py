@@ -9,6 +9,7 @@ from aiogram.dispatcher.event.handler import CallableObject, CallbackType
 from aiogram.dispatcher.event.telegram import TelegramEventObserver
 from dataclasses import dataclass
 from functools import partial
+from uuid import uuid1
 
 
 class StateValue(Filter):
@@ -71,16 +72,14 @@ class SurveyQuestion:
 
 
 class Survey(RouterBuilder):
-    step_key: str = "_survey_step"
-
     def __init__(
         self,
         questions: List[SurveyQuestion],
         on_exit: CallbackType,
         on_cancel: Optional[CallbackType] = None,
         state: Optional[State] = None,
-        enter_filters: Filterset | List[List[Filter]] = [[]],
-        cancel_filters: Filterset | List[List[Filter]] = [[F.text == "/cancel"]],
+        enter_filterset: Filterset | List[List[Filter]] = [[]],
+        cancel_filterset: Filterset | List[List[Filter]] = [[F.text == "/cancel"]],
     ) -> None:
         self.questions = questions
 
@@ -95,20 +94,22 @@ class Survey(RouterBuilder):
 
         # Filter set, that triggers this survey to start
         self.enter_filterset = (
-            enter_filters
-            if isinstance(enter_filters, Filterset)
-            else Filterset(enter_filters)
+            enter_filterset
+            if isinstance(enter_filterset, Filterset)
+            else Filterset(enter_filterset)
         )
 
         # Filter set, that triggers this survey to cancel in the middle
         self.cancel_filterset = (
-            cancel_filters
-            if isinstance(cancel_filters, Filterset)
-            else Filterset(cancel_filters)
+            cancel_filterset
+            if isinstance(cancel_filterset, Filterset)
+            else Filterset(cancel_filterset)
         )
 
         if self.on_cancel is None and not self.cancel_filterset.empty():
             raise ValueError()
+    
+        self.step_key = f"_survey_step_{uuid1()}"
 
     async def _send_welcome_message(self, message: Message, step: int) -> None:
         await message.answer(
