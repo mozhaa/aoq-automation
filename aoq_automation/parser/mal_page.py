@@ -23,3 +23,7 @@ class MALPageParser:
     @cached_property
     def stats_url(self) -> str:
         return self.main_page.find('a:contains("Stats")').attr.href
+
+    @cached_property
+    def title_ro(self) -> str:
+        return self.main_page.find('div.h1-title h1.title-name > strong').eq(0).text()
