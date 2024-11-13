@@ -13,8 +13,8 @@ class Preaction(Filter):
 
 class AsMALUrl(Preaction):
     """
-    Interpret message as MAL URL, validate it and save MAL URL in consistent format into state["mal_url"].
-    If it is not valid MAL URL, fail filtering (return False).
+    Interpret message as MAL URL, validate it (both URL and accessed page) and save MALPageParser
+    into state["mal_page"]. If it is not valid MAL URL, fail filtering (return False).
     """
 
     async def __call__(self, message: Message, state: FSMContext) -> bool:
@@ -22,19 +22,7 @@ class AsMALUrl(Preaction):
         url_parser = MALUrlParser(url)
         if not url_parser.is_valid():
             return False
-        await state.update_data(mal_url=url_parser.mal_url)
-        return True
-
-
-class AsMALPage(Preaction):
-    """
-    Take mal_url from FSMContext, and create MALPageParser object from this URL (validate it as URL to anime page).
-    Pass if it's valid, otherwise fail filtering (return False).
-    """
-
-    async def __call__(self, message: Message, state: FSMContext) -> bool:
-        mal_url = await state.get_value("mal_url")
-        page = MALPageParser(mal_url)
+        page = MALPageParser(url_parser.mal_url)
         await page.load_pages()
         if not page.valid:
             return False

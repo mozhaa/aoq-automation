@@ -8,7 +8,7 @@ from aoq_automation.config import config
 from typing import *
 from .markups import *
 from .preactions import *
-from .utils import Survey, SurveyQuestion
+from .utils import Survey, SurveyQuestion, Filterset, redirect_to
 
 
 bot = Bot(token=config["telegram"]["token"])
@@ -50,20 +50,26 @@ async def anime_page(message: Message, state: FSMContext) -> None:
         reply_markup=anime_page_markup,
     )
 
+@redirect_to(anime_page)
+async def to_anime_page(message: Message, state: FSMContext) -> None:
+    pass
+    # mal_page = await state.get_value("mal_page")
+    # anime = Anime(mal_url=mal_page.url, title_ro=mal_page.title_ro)
+    # async with async_session() as session:
+    #     session.add(anime)
+    #     session.commit()
 
 r, fr = Survey(
     questions=[
         SurveyQuestion(
             key="mal_url",
-            filterset=[
-                [AsMALUrl(), AsMALPage()],
-            ],
+            filterset=AsMALUrl(),
         ),
     ],
     state=Form.searching_anime,
-    on_exit=anime_page,
+    on_exit=to_anime_page,
     on_cancel=menu,
-    enter_filters=[
+    enter_filterset=[
         [Form.menu, F.text == "Find anime"],
         [Form.anime_page, F.text == "Find another anime"],
     ],

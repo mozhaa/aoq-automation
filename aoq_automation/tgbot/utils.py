@@ -8,7 +8,7 @@ from aiogram import Router, F
 from aiogram.dispatcher.event.handler import CallableObject, CallbackType
 from aiogram.dispatcher.event.telegram import TelegramEventObserver
 from dataclasses import dataclass
-from functools import partial
+from functools import partial, wraps
 from uuid import uuid1
 
 
@@ -34,7 +34,9 @@ class Filterset:
     def __init__(self, filters: List[List[Filter]] | List[Filter] | Filter) -> None:
         if not isinstance(filters, list):
             self._table = [[filters]]
-        elif isinstance(filters, list) and all([not isinstance(el, list) for el in filters]):
+        elif isinstance(filters, list) and all(
+            [not isinstance(el, list) for el in filters]
+        ):
             self._table = [filters]
         else:
             self._table = filters
@@ -68,7 +70,7 @@ class SurveyQuestion:
     """
 
     key: str
-    filterset: Filterset | List[List[Filter]]
+    filterset: Filterset | List[List[Filter]] | List[Filter] | Filter
     welcome_message: str = "Enter value for {key}"
     invalidation_message: str = '"{response}" is invalid value for {key}, try again'
     keyboard_markup: Optional[ReplyKeyboardMarkup] = None
@@ -115,7 +117,7 @@ class Survey(RouterBuilder):
 
         if self.on_cancel is None and not self.cancel_filterset.empty():
             raise ValueError()
-    
+
         self.step_key = f"_survey_step_{uuid1()}"
 
     async def _send_welcome_message(self, message: Message, step: int) -> None:
@@ -190,3 +192,15 @@ class Survey(RouterBuilder):
             )
 
         return r, fr
+
+
+def redirect_to(callback: CallbackType):
+    def decorator(action: CallbackType):
+        @wraps(callback)
+        async def wrapper(*args, **kwargs):
+            await CallableObject(action).call(*args, **kwargs)
+            await CallableObject(callback).call(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
