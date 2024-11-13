@@ -31,15 +31,22 @@ class Filterset:
     Set of filters in disjunctive normal form
     """
 
-    def __init__(self, filters: List[List[Filter]]) -> None:
-        self._table = filters
+    def __init__(self, filters: List[List[Filter]] | List[Filter] | Filter) -> None:
+        if not isinstance(filters, list):
+            self._table = [[filters]]
+        elif isinstance(filters, list) and all([not isinstance(el, list) for el in filters]):
+            self._table = [filters]
+        else:
+            self._table = filters
 
     def register(
         self,
         observer: TelegramEventObserver,
         callback: CallbackType,
-        appendix: List[Filter] = [],
+        appendix: List[Filter] | Filter = [],
     ) -> None:
+        if not isinstance(appendix, list):
+            appendix = [appendix]
         for filter_set in self._table:
             observer.register(callback, *(appendix + filter_set))
 
@@ -162,11 +169,11 @@ class Survey(RouterBuilder):
             await self._send_invalidation_message(message, step)
 
         self.enter_filterset.register(
-            r.message, on_enter, [StateValue(self.step_key, None)]
+            r.message, on_enter, StateValue(self.step_key, None)
         )
 
         self.cancel_filterset.register(
-            r.message, on_cancel, [~StateValue(self.step_key, None)]
+            r.message, on_cancel, ~StateValue(self.step_key, None)
         )
 
         for step, question in enumerate(self.questions):
@@ -175,7 +182,7 @@ class Survey(RouterBuilder):
             question.filterset.register(
                 r.message,
                 partial(on_correct_input, step),
-                [StateValue(self.step_key, step)],
+                StateValue(self.step_key, step),
             )
 
             fr.message.register(
