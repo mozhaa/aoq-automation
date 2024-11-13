@@ -4,14 +4,14 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup, default_state
 from aiogram.filters import Command
 from aiogram.types import Message
-from aoq_automation.config import token
+from aoq_automation.config import config
 from typing import *
 from .markups import *
 from .preactions import *
 from .utils import Survey, SurveyQuestion
 
 
-bot = Bot(token=token)
+bot = Bot(token=config["telegram"]["token"])
 dp = Dispatcher(storage=MemoryStorage())
 router = Router()
 dp.include_router(router)

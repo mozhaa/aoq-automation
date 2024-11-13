@@ -6,3 +6,4 @@ __pycache__
 .env
 driver
 .pytest_cache
+*.sqlite3

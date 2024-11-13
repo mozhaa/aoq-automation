@@ -1,11 +1,19 @@
-from sqlalchemy import ForeignKey, UniqueConstraint
-from sqlalchemy.orm import relationship, Mapped, mapped_column
+from sqlalchemy import ForeignKey, UniqueConstraint, func
+from sqlalchemy.orm import relationship, Mapped, mapped_column, DeclarativeBase
 from sqlalchemy.schema import CreateTable
-from database import Base
+from sqlalchemy.ext.asyncio import AsyncAttrs
 from typing import List
+from datetime import datetime
 import sys
 import inspect
-from datetime import datetime
+
+
+class Base(AsyncAttrs, DeclarativeBase):
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        server_default=func.now(), onupdate=func.now()
+    )
 
 
 class Anime(Base):
@@ -22,6 +30,7 @@ class Anime(Base):
     p_mal: Mapped["PAnimeMAL"] = relationship(
         back_populates="p_anime_mal", cascade="all, delete-orphan"
     )
+    __table_args__ = (UniqueConstraint("mal_url", name="_mal_url_uc"),)
 
 
 class QItem(Base):
@@ -40,7 +49,9 @@ class QItem(Base):
     difficulties: Mapped[List["QItemDifficulty"]] = relationship(
         back_populates="qitem_difficulty", cascade="all, delete-orphan"
     )
-    __table_args__ = (UniqueConstraint("category", "number", "_category_number_uc"),)
+    __table_args__ = (
+        UniqueConstraint("category", "number", name="_category_number_uc"),
+    )
 
 
 class QItemSource(Base):
@@ -67,6 +78,7 @@ class QItemSourceTiming(Base):
     qitem_source_id: Mapped[int] = mapped_column(ForeignKey("qitem_source.id"))
     guess_start: Mapped[float]
     reveal_start: Mapped[float]
+    added_by: Mapped[str]
 
     qitem_source: Mapped["QItemSource"] = relationship(back_populates="qitem_source")
 

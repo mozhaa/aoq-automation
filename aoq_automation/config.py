@@ -1,4 +1,5 @@
 from pathlib import Path
+import configparser
 
-with (Path("files") / "token.hidden").open("r") as f:
-    token = f.read()
+config = configparser.ConfigParser()
+config.read((Path("files") / "config.hidden").resolve())
