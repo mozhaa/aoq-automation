@@ -8,8 +8,9 @@ from aoq_automation.config import config
 from typing import *
 from .markups import *
 from .preactions import *
+from aoq_automation.database.models import *
 from .utils import Survey, SurveyQuestion, Filterset, redirect_to
-from sqlalchemy import select
+from sqlalchemy import delete
 from aoq_automation.database.tools import get_or_create
 from aoq_automation.database.database import db
 
@@ -62,6 +63,15 @@ async def to_anime_page(message: Message, state: FSMContext) -> None:
     anime = Anime(mal_url=mal_page.url, title_ro=mal_page.title_ro)
     anime_id = await get_or_create(anime, ["mal_url"])
     await state.update_data(anime_id=anime_id)
+
+
+@router.message(Form.anime_page, F.text == "Delete this anime")
+@redirect_to(menu)
+async def delete_anime(message: Message, state: FSMContext) -> None:
+    anime_id = await state.get_value("anime_id")
+    async with db.async_session() as session:
+        await session.execute(delete(Anime).filter_by(id=anime_id))
+        await session.commit()
 
 
 r, fr = Survey(
