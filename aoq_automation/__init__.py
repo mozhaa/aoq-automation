@@ -1,2 +1,3 @@
 from .tgbot import start
-from .database import connect, create_tables
+from .database import db
+from .database.models import *

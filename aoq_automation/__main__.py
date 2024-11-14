@@ -1,4 +1,4 @@
-from . import start, create_tables, connect
+from . import start, db
 import asyncio
 import argparse
 
@@ -10,10 +10,17 @@ async def main() -> None:
         help="create tables in database (use this when database is new)",
         action="store_true",
     )
+    parser.add_argument(
+        "--verbose-sql",
+        help="show all sql expressions, that are sent into database",
+        action="store_true",
+    )
     args = parser.parse_args()
-    connect()
+    
+    db.connect(echo=args.verbose_sql)
+    print("connected to database")
     if args.create_tables:
-        await create_tables()
+        await db.create_tables()
         print("tables created")
     print("starting polling")
     await start()

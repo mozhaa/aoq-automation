@@ -9,6 +9,9 @@ from typing import *
 from .markups import *
 from .preactions import *
 from .utils import Survey, SurveyQuestion, Filterset, redirect_to
+from sqlalchemy import select
+from aoq_automation.database.tools import get_or_create
+from aoq_automation.database.database import db
 
 
 bot = Bot(token=config["telegram"]["token"])
@@ -44,20 +47,22 @@ async def menu(message: Message, state: FSMContext) -> None:
 @router.message(Form.qitem_page, F.text == "Back to Anime page")
 async def anime_page(message: Message, state: FSMContext) -> None:
     await state.set_state(Form.anime_page)
-    mal_url = (await state.get_data())["mal_url"]
-    await message.answer(
-        text=f"You're on anime page! URL: {mal_url}",
-        reply_markup=anime_page_markup,
-    )
+    anime_id = await state.get_value("anime_id")
+    async with db.async_session() as session:
+        anime = await session.get(Anime, anime_id)
+        await message.answer(
+            text=f"You're on anime page! URL: {anime.mal_url}, ID: {anime_id}",
+            reply_markup=anime_page_markup,
+        )
+
 
 @redirect_to(anime_page)
 async def to_anime_page(message: Message, state: FSMContext) -> None:
-    pass
-    # mal_page = await state.get_value("mal_page")
-    # anime = Anime(mal_url=mal_page.url, title_ro=mal_page.title_ro)
-    # async with async_session() as session:
-    #     session.add(anime)
-    #     session.commit()
+    mal_page = await state.get_value("mal_page")
+    anime = Anime(mal_url=mal_page.url, title_ro=mal_page.title_ro)
+    anime_id = await get_or_create(anime, ["mal_url"])
+    await state.update_data(anime_id=anime_id)
+
 
 r, fr = Survey(
     questions=[
