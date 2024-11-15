@@ -1,5 +1,5 @@
 from aiohttp import ClientSession
-from .utils import pget
+from ..utils import pget
 from functools import cached_property
 
 

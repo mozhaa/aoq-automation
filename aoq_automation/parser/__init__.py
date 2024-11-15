@@ -1,2 +1,1 @@
-from .mal_url import *
-from .mal_page import *
+from .mal import *
