@@ -53,8 +53,9 @@ async def anime_page(message: Message, state: FSMContext) -> None:
     anime_id = await state.get_value("anime_id")
     async with db.async_session() as session:
         anime = await session.get(Anime, anime_id)
+        p_anime_mal = await anime.awaitable_attrs.p_mal
         await message.answer(
-            text=f"You're on anime page! URL: {anime.mal_url}, ID: {anime_id}",
+            text=f"You're on anime page! URL: {anime.mal_url}, ID: {anime_id}, rating: {p_anime_mal.rating}",
             reply_markup=anime_page_markup,
         )
 
@@ -63,7 +64,13 @@ async def anime_page(message: Message, state: FSMContext) -> None:
 async def to_anime_page(message: Message, state: FSMContext) -> None:
     mal_page = await state.get_value("mal_page")
     anime = Anime(mal_url=mal_page.url, title_ro=mal_page.title_ro)
-    anime_id = await get_or_create(anime, ["mal_url"])
+    anime_id, is_new = await get_or_create(anime, ["mal_url"])
+    if is_new:
+        async with db.async_session() as session:
+            p_anime_mal = mal_page.as_parsed()
+            p_anime_mal.anime_id = anime_id
+            session.add(p_anime_mal)
+            await session.commit()
     await state.update_data(anime_id=anime_id)
 
 
@@ -72,7 +79,8 @@ async def to_anime_page(message: Message, state: FSMContext) -> None:
 async def delete_anime(message: Message, state: FSMContext) -> None:
     anime_id = await state.get_value("anime_id")
     async with db.async_session() as session:
-        await session.execute(delete(Anime).filter_by(id=anime_id))
+        anime = await session.get(Anime, anime_id)
+        await session.delete(anime)
         await session.commit()
 
 

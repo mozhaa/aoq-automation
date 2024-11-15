@@ -24,21 +24,13 @@ class Anime(Base):
     title_ro: Mapped[str]
     mal_url: Mapped[str]
 
-    # relationships
     qitems: Mapped[List["QItem"]] = relationship(
-        back_populates="anime", cascade="all, delete-orphan"
+        back_populates="anime", cascade="all, delete"
     )
-    p_mal: Mapped["PAnimeMAL"] = relationship(
-        back_populates="anime", cascade="all, delete-orphan"
-    )
-    p_shiki: Mapped["PAnimeShiki"] = relationship(
-        back_populates="anime", cascade="all, delete-orphan"
-    )
-    p_anidb: Mapped["PAnimeAniDB"] = relationship(
-        back_populates="anime", cascade="all, delete-orphan"
-    )
-    
-    # constraints
+    p_mal: Mapped["PAnimeMAL"] = relationship(cascade="all, delete")
+    p_shiki: Mapped["PAnimeShiki"] = relationship(cascade="all, delete")
+    p_anidb: Mapped["PAnimeAniDB"] = relationship(cascade="all, delete")
+
     __table_args__ = (UniqueConstraint("mal_url", name="_mal_url_uc"),)
 
 
@@ -52,14 +44,10 @@ class QItem(Base):
     number: Mapped[int]
 
     anime: Mapped["Anime"] = relationship(back_populates="qitems")
-    sources: Mapped[List["QItemSource"]] = relationship(
-        back_populates="qitem", cascade="all, delete-orphan"
-    )
-    difficulties: Mapped[List["QItemDifficulty"]] = relationship(
-        back_populates="qitem", cascade="all, delete-orphan"
-    )
-    p_anidb: Mapped["PQItemAniDB"] = relationship(back_populates="qitem")
-    
+    sources: Mapped[List["QItemSource"]] = relationship(cascade="all, delete")
+    difficulties: Mapped[List["QItemDifficulty"]] = relationship(cascade="all, delete")
+    p_anidb: Mapped["PQItemAniDB"] = relationship(cascade="all, delete")
+
     __table_args__ = (
         UniqueConstraint("category", "number", name="_category_number_uc"),
     )
@@ -76,9 +64,7 @@ class QItemSource(Base):
     added_by: Mapped[str]  # manual (user_id from bot), auto (script name)
 
     qitem: Mapped["QItem"] = relationship(back_populates="sources")
-    timings: Mapped[List["QItemSourceTiming"]] = relationship(
-        back_populates="qitem_source", cascade="all, delete-orphan"
-    )
+    timings: Mapped[List["QItemSourceTiming"]] = relationship(cascade="all, delete")
 
 
 class QItemSourceTiming(Base):
@@ -129,8 +115,6 @@ class PAnimeMAL(Base):
     dropped: Mapped[int]
     on_hold: Mapped[int]
 
-    anime: Mapped["Anime"] = relationship(back_populates="p_mal")
-
 
 class PAnimeShiki(Base):
     """Parsed Anime information from Shikimori"""
@@ -155,8 +139,6 @@ class PAnimeShiki(Base):
     dropped: Mapped[int]
     on_hold: Mapped[int]
 
-    anime: Mapped["Anime"] = relationship(back_populates="p_shiki")
-
 
 class PAnimeAniDB(Base):
     """Parsed Anime information from AniDB"""
@@ -168,8 +150,6 @@ class PAnimeAniDB(Base):
     url: Mapped[str]
     airing_start: Mapped[datetime]
     airing_end: Mapped[datetime]
-
-    anime: Mapped["Anime"] = relationship(back_populates="p_anidb")
 
 
 class PQItemAniDB(Base):
@@ -184,8 +164,6 @@ class PQItemAniDB(Base):
     official_name: Mapped[str]
     performer: Mapped[str]
     rating_value: Mapped[float]
-
-    qitem: Mapped["QItem"] = relationship(back_populates="p_anidb")
 
 
 def print_tables():

@@ -29,6 +29,23 @@ class MALPageParser:
     def stats_url(self) -> str:
         return self._main_page.find('a:contains("Stats")').attr.href
 
+    def as_parsed(self) -> PAnimeMAL:
+        return PAnimeMAL(
+            url=self.url,
+            title_en=self.title_en,
+            poster_url=self.poster_url,
+            rating=self.rating,
+            ratings_count=self.ratings_count,
+            favorites=self.favorites,
+            popularity=self.popularity,
+            ranked=self.ranked,
+            plan_to_watch=self.plan_to_watch,
+            completed=self.completed,
+            watching=self.watching,
+            dropped=self.dropped,
+            on_hold=self.on_hold,
+        )
+
     @cached_property
     def title_ro(self) -> str:
         return self._main_page.find("div.h1-title h1.title-name > strong").eq(0).text()
@@ -36,22 +53,28 @@ class MALPageParser:
     @cached_property
     def poster_url(self) -> str:
         return (
-            self._main_page.find('.leftside a img[itemprop="image"]').eq(0).attr["data-src"]
+            self._main_page.find('.leftside a img[itemprop="image"]')
+            .eq(0)
+            .attr["data-src"]
         )
 
     @cached_property
     def title_en(self):
         return text_without_span(
-            self._main_page.find('.js-alternative-titles span:contains("English:")').eq(0)
+            self._main_page.find('.js-alternative-titles span:contains("English:")').eq(
+                0
+            )
         )
 
     @cached_property
     def rating(self):
         return float(self._main_page.find('span[itemprop="ratingValue"]').text())
-    
+
     @cached_property
-    def rating_count(self):
-        return int(self._main_page.find('span[itemprop="ratingCount"]').text().replace(',', ''))
+    def ratings_count(self):
+        return int(
+            self._main_page.find('span[itemprop="ratingCount"]').text().replace(",", "")
+        )
 
     def _get_int_from_spaceit_pad(self, span_content: str, stats_page: bool = False):
         return int(

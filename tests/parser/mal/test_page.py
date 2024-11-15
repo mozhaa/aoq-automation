@@ -64,8 +64,8 @@ def test_rating(page_1):
     assert page_1.rating == 8.4
 
 
-def test_rating_count(page_1):
-    assert page_1.rating_count == 16830
+def test_ratings_count(page_1):
+    assert page_1.ratings_count == 16830
 
 
 def test_ranked(page_1):
