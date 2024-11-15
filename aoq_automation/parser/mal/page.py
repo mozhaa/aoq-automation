@@ -1,5 +1,6 @@
 from aiohttp import ClientSession
-from ..utils import pget
+from ..utils import pget, text_without_span
+from aoq_automation.database.models import PAnimeMAL
 from functools import cached_property
 
 
@@ -30,4 +31,65 @@ class MALPageParser:
 
     @cached_property
     def title_ro(self) -> str:
-        return self._main_page.find('div.h1-title h1.title-name > strong').eq(0).text()
+        return self._main_page.find("div.h1-title h1.title-name > strong").eq(0).text()
+
+    @cached_property
+    def poster_url(self) -> str:
+        return (
+            self._main_page.find('.leftside a img[itemprop="image"]').eq(0).attr["data-src"]
+        )
+
+    @cached_property
+    def title_en(self):
+        return text_without_span(
+            self._main_page.find('.js-alternative-titles span:contains("English:")').eq(0)
+        )
+
+    @cached_property
+    def rating(self):
+        return float(self._main_page.find('span[itemprop="ratingValue"]').text())
+    
+    @cached_property
+    def rating_count(self):
+        return int(self._main_page.find('span[itemprop="ratingCount"]').text().replace(',', ''))
+
+    def _get_int_from_spaceit_pad(self, span_content: str, stats_page: bool = False):
+        return int(
+            text_without_span(
+                (self._stats_page if stats_page else self._main_page).find(
+                    f'.spaceit_pad span:contains("{span_content}")'
+                )
+            )
+        )
+
+    @cached_property
+    def favorites(self):
+        return self._get_int_from_spaceit_pad("Favorites:")
+
+    @cached_property
+    def popularity(self):
+        return self._get_int_from_spaceit_pad("Popularity:")
+
+    @cached_property
+    def ranked(self):
+        return self._get_int_from_spaceit_pad("Ranked:")
+
+    @cached_property
+    def watching(self):
+        return self._get_int_from_spaceit_pad("Watching:", stats_page=True)
+
+    @cached_property
+    def completed(self):
+        return self._get_int_from_spaceit_pad("Completed:", stats_page=True)
+
+    @cached_property
+    def plan_to_watch(self):
+        return self._get_int_from_spaceit_pad("Plan to Watch:", stats_page=True)
+
+    @cached_property
+    def dropped(self):
+        return self._get_int_from_spaceit_pad("Dropped:", stats_page=True)
+
+    @cached_property
+    def on_hold(self):
+        return self._get_int_from_spaceit_pad("On-Hold:", stats_page=True)
