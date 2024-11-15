@@ -32,6 +32,8 @@ class Form(StatesGroup):
     anime_page = State()
     qitems_page = State()
     qitem_page = State()
+    editing_parameter = State()
+    adding_qitem = State()
 
 
 @router.message(Command("start"))
@@ -133,6 +135,39 @@ async def qitem_page(message: Message, state: FSMContext) -> None:
         text=f"You're on QItem page: {qitem}",
         reply_markup=qitem_markup,
     )
+
+
+keys = ["category", "number", "difficulty", "source", "guess time", "reveal time"]
+filtersets = [
+    Filterset(F.text.in_(["OP", "ED"])),
+    Filterset(F.text.regexp("^[0-9]*$")),
+    Filterset(
+        [
+            [F.text.regexp("^[0-9]*$"), F.func(lambda s: int(s) > 0 and int(s) <= 100)],
+            [F.text.in_(["Very easy", "Easy", "Medium", "Hard", "Very hard"])],
+        ]
+    ),
+    Filterset(F.text),
+    Filterset(F.text),
+    Filterset([F.text, F.func(lambda x: False)]),
+]
+
+for key, filterset in zip(keys, filtersets):
+    r, fr = Survey(
+        questions=[
+            SurveyQuestion(
+                key=key,
+                filterset=filterset,
+            )
+        ],
+        on_exit=qitem_page,
+        on_cancel=qitem_page,
+        state=Form.editing_parameter,
+        enter_filterset=[[Form.qitem_page, F.text == f"Edit {key}"]],
+    ).as_routers()
+
+    router.include_router(r)
+    fallback_router.include_router(fr)
 
 
 @fallback_router.message(Form.menu)
