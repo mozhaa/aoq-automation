@@ -1,0 +1,19 @@
+### config.hidden
+
+```
+[telegram]
+token = <telegram bot token>
+
+[database]
+database = <postgres or sqlite>
+
+[database.postgres]
+username = ...
+password = ...
+host = ...
+port = ...
+database = ...
+
+[database.sqlite]
+file = ...
+```
