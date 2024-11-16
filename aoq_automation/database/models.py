@@ -1,5 +1,11 @@
 from sqlalchemy import ForeignKey, UniqueConstraint, func
-from sqlalchemy.orm import relationship, Mapped, mapped_column, DeclarativeBase
+from sqlalchemy.orm import (
+    relationship,
+    Mapped,
+    mapped_column,
+    DeclarativeBase,
+    validates,
+)
 from sqlalchemy.schema import CreateTable
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from typing import List
@@ -52,6 +58,20 @@ class QItem(Base):
         UniqueConstraint("category", "number", name="_category_number_uc"),
     )
 
+    @validates("category")
+    def validate_category(self, key: str, value: str) -> str:
+        if value.lower() in ["op", "opening"]:
+            return "OP"
+        if value.lower() in ["ed", "ending"]:
+            return "ED"
+        invalidate(key, value)
+
+    @validates("number")
+    def validate_number(self, key: str, value: int) -> int:
+        if value > 0:
+            return value
+        invalidate(key, value)
+
 
 class QItemSource(Base):
     """Source for Quiz Item"""
@@ -79,6 +99,38 @@ class QItemSourceTiming(Base):
 
     qitem_source: Mapped["QItemSource"] = relationship(back_populates="timings")
 
+    @classmethod
+    def validate_timestamp(cls, key: str, value: str) -> float:
+        possible_formats = [
+            "%H:%M:%S.%f",
+            "%M:%S.%f",
+            "%S.%f",
+            "%H:%M:%S",
+            "%M:%S",
+            "%S",
+        ]
+        seconds = None
+        for format in possible_formats:
+            try:
+                t = datetime.strptime(value, format).time()
+                seconds = (
+                    t.microsecond / 1000000 + t.second + 60 * (t.minute + 60 * (t.hour))
+                )
+                break
+            except ValueError:
+                continue
+        if seconds is not None:
+            return seconds
+        invalidate(key, value)
+
+    @validates("guess_start")
+    def validate_guess_start(self, key: str, value: str) -> float:
+        return QItemSourceTiming.validate_timestamp(key, value)
+
+    @validates("reveal_start")
+    def validate_reveal_start(self, key: str, value: str) -> float:
+        return QItemSourceTiming.validate_timestamp(key, value)
+
 
 class QItemDifficulty(Base):
     """Quiz Difficulty for Quiz Item"""
@@ -90,6 +142,21 @@ class QItemDifficulty(Base):
     added_by: Mapped[str]  # manual (user_id from bot), auto (script name)
 
     qitem: Mapped["QItem"] = relationship(back_populates="difficulties")
+
+    @validates("value")
+    def validate_value(self, key: str, value: str) -> int:
+        if value.isdigit() and int(value) >= 0 and int(value) <= 100:
+            return int(value)
+        difficulties = {
+            "very easy": 10,
+            "easy": 20,
+            "medium": 30,
+            "hard": 50,
+            "very hard": 70,
+        }
+        if value.lower() in difficulties.keys():
+            return difficulties[value.lower()]
+        invalidate(key, value)
 
 
 class PAnimeMAL(Base):
@@ -164,6 +231,10 @@ class PQItemAniDB(Base):
     official_name: Mapped[str]
     performer: Mapped[str]
     rating_value: Mapped[float]
+
+
+def invalidate(key: str, value: str) -> None:
+    raise ValueError(f'"{value}" is invalid value for {key}')
 
 
 def print_tables():
