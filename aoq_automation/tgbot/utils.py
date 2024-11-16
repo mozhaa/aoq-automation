@@ -193,6 +193,12 @@ class Survey(RouterBuilder):
 
         return r, fr
 
+    def include_into(self, r: Router, fr: Router) -> None:
+        nr, nfr = self.as_routers()
+        r.include_router(nr)
+        fr.include_router(nfr)
+        fr.include_router(nfr)
+
 
 def redirect_to(callback: CallbackType):
     def decorator(action: CallbackType):

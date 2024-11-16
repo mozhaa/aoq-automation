@@ -84,7 +84,7 @@ async def delete_anime(message: Message, state: FSMContext) -> None:
         await session.commit()
 
 
-r, fr = Survey(
+Survey(
     questions=[
         SurveyQuestion(
             key="mal_url",
@@ -98,10 +98,7 @@ r, fr = Survey(
         [Form.menu, F.text == "Find anime"],
         [Form.anime_page, F.text == "Find another anime"],
     ],
-).as_routers()
-
-router.include_router(r)
-fallback_router.include_router(fr)
+).include_into(router, fallback_router)
 
 
 @router.message(Form.anime_page, F.text == "Manage OP & ED", GetQItems())
@@ -161,7 +158,7 @@ filtersets = [
 ]
 
 for key, filterset in zip(keys, filtersets):
-    r, fr = Survey(
+    Survey(
         questions=[
             SurveyQuestion(
                 key=key,
@@ -172,10 +169,7 @@ for key, filterset in zip(keys, filtersets):
         on_cancel=qitem_page,
         state=Form.editing_parameter,
         enter_filterset=[[Form.qitem_page, F.text == f"Edit {key}"]],
-    ).as_routers()
-
-    router.include_router(r)
-    fallback_router.include_router(fr)
+    ).include_into(router, fallback_router)
 
 
 @fallback_router.message(Form.menu)
