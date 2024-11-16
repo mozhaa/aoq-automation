@@ -201,7 +201,7 @@ class Survey(RouterBuilder):
 
 def redirect_to(callback: CallbackType):
     def decorator(action: CallbackType):
-        @wraps(callback)
+        @wraps(action)
         async def wrapper(*args, **kwargs):
             await CallableObject(action).call(*args, **kwargs)
             await CallableObject(callback).call(*args, **kwargs)

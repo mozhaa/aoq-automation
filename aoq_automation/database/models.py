@@ -10,6 +10,7 @@ from sqlalchemy.schema import CreateTable
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from typing import List
 from datetime import datetime
+from .utils import raises_only
 import sys
 import inspect
 
@@ -59,6 +60,7 @@ class QItem(Base):
     )
 
     @validates("category")
+    @raises_only(ValueError)
     def validate_category(self, key: str, value: str) -> str:
         if value.lower() in ["op", "opening"]:
             return "OP"
@@ -67,6 +69,7 @@ class QItem(Base):
         invalidate(key, value)
 
     @validates("number")
+    @raises_only(ValueError)
     def validate_number(self, key: str, value: int) -> int:
         if value > 0:
             return value
@@ -124,10 +127,12 @@ class QItemSourceTiming(Base):
         invalidate(key, value)
 
     @validates("guess_start")
+    @raises_only(ValueError)
     def validate_guess_start(self, key: str, value: str) -> float:
         return QItemSourceTiming.validate_timestamp(key, value)
 
     @validates("reveal_start")
+    @raises_only(ValueError)
     def validate_reveal_start(self, key: str, value: str) -> float:
         return QItemSourceTiming.validate_timestamp(key, value)
 
@@ -144,6 +149,7 @@ class QItemDifficulty(Base):
     qitem: Mapped["QItem"] = relationship(back_populates="difficulties")
 
     @validates("value")
+    @raises_only(ValueError)
     def validate_value(self, key: str, value: str) -> int:
         if value.isdigit() and int(value) >= 0 and int(value) <= 100:
             return int(value)
