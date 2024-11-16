@@ -35,8 +35,8 @@ def test_category():
 
 
 def test_number():
-    valid = [1, 2, 3, 4, 5]
-    invalid = [0, -1, -2, -3, "OP", "2"]
+    valid = [1, 2, 3, 4, 5, "2", "1"]
+    invalid = [0, -1, -2, -3, "OP", "2g", "+2", "-1"]
     for number in valid:
         QItem(number=number)
     for number in invalid:
@@ -66,8 +66,10 @@ def test_difficulty():
         "99": 99,
         "Very Hard": 70,
         "EASY": 20,
+        12: 12,
+        0: 0,
     }
-    invalid = ["-1", "veryhard", "Normal", 15]
+    invalid = ["-1", "veryhard", "Normal", 101, -12]
     for x, expected in valid.items():
         assert QItemDifficulty(value=x).value == expected
     for x in invalid:

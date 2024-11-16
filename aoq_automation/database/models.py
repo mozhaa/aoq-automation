@@ -70,7 +70,11 @@ class QItem(Base):
 
     @validates("number")
     @raises_only(ValueError)
-    def validate_number(self, key: str, value: int) -> int:
+    def validate_number(self, key: str, value: int | str) -> int:
+        if isinstance(value, str):
+            if not value.isdigit():
+                invalidate(key, value)
+            value = int(value)
         if value > 0:
             return value
         invalidate(key, value)
@@ -150,9 +154,14 @@ class QItemDifficulty(Base):
 
     @validates("value")
     @raises_only(ValueError)
-    def validate_value(self, key: str, value: str) -> int:
-        if value.isdigit() and int(value) >= 0 and int(value) <= 100:
-            return int(value)
+    def validate_value(self, key: str, value: str | int) -> int:
+        if isinstance(value, str) and value.isdigit():
+            value = int(value)
+        if isinstance(value, int):
+            if value >= 0 and value <= 100:
+                return value
+            else:
+                invalidate(key, value)
         difficulties = {
             "very easy": 10,
             "easy": 20,
