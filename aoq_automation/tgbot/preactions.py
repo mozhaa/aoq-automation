@@ -32,7 +32,8 @@ class AsMALUrl(Preaction):
 
 class AsQItem(Preaction):
     """
-    Interpret message as QItem representation (category + number, f.e. "OP 3") and save it into state["qitem"]
+    Interpret message as QItem representation (category + number, f.e. "OP 3"),
+    and save category and number into FSMContext
     """
 
     async def __call__(self, message: Message, state: FSMContext) -> bool:
@@ -40,5 +41,6 @@ class AsQItem(Preaction):
         qitem = message.text
         if qitem not in qitems:
             return False
-        await state.update_data(qitem=qitem)
+        category, number = qitem.split(" ")
+        await state.update_data(category=category, number=int(number))
         return True

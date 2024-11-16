@@ -10,7 +10,7 @@ from .markups import *
 from .preactions import *
 from aoq_automation.database.models import *
 from .utils import Survey, SurveyQuestion, Filterset, redirect_to
-from sqlalchemy import delete
+from sqlalchemy import select
 from aoq_automation.database.tools import get_or_create
 from aoq_automation.database.database import db
 
@@ -109,7 +109,11 @@ async def qitems_page(message: Message, state: FSMContext) -> None:
     async with db.async_session() as session:
         anime = await session.get(Anime, anime_id)
         qitems = await anime.awaitable_attrs.qitems
-        qitems_keyboard = await state.get_value("qitems_keyboard", QItemsKeyboardMarkup(qitems))
+        qitems_repr = [f"{qitem.category} {qitem.number}" for qitem in qitems]
+        await state.update_data(qitems=qitems_repr)
+        qitems_keyboard = await state.get_value(
+            "qitems_keyboard", QItemsKeyboardMarkup(qitems_repr)
+        )
         await state.update_data(qitems_keyboard=qitems_keyboard)
         await message.answer(
             text=f"You're on QItems page!",
@@ -136,11 +140,19 @@ async def qitems_page_previous_page(message: Message, state: FSMContext) -> None
 @router.message(Form.qitems_page, AsQItem())
 async def qitem_page(message: Message, state: FSMContext) -> None:
     await state.set_state(Form.qitem_page)
-    qitem = await state.get_value("qitem")
-    await message.answer(
-        text=f"You're on QItem page: {qitem}",
-        reply_markup=qitem_markup,
-    )
+    category = await state.get_value("category")
+    number = await state.get_value("number")
+    async with db.async_session() as session:
+        qitem = await session.execute(
+            select(QItem).filter_by(category=category, number=number)
+        )
+        qitem = qitem.scalar_one()
+        if qitem is None:
+            return await qitems_page(message, state)
+        await message.answer(
+            text=f"You're on QItem page: {qitem.category} {qitem.number}",
+            reply_markup=qitem_markup,
+        )
 
 
 keys = ["category", "number", "difficulty", "source", "guess time", "reveal time"]
