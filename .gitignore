@@ -3,5 +3,7 @@
 __pycache__
 *.db
 *.wav
+.env
 driver
 .pytest_cache
+*.sqlite3
