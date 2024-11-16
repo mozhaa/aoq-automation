@@ -1,8 +1,8 @@
 from aiogram.filters import Filter
-from aiogram.types import Message, ReplyKeyboardMarkup
-from typing import Dict, Any, List
+from aiogram.types import Message, ReplyKeyboardMarkup, ReplyKeyboardRemove
+from typing import Dict, Any, List, Type
 from aiogram.fsm.context import FSMContext
-from typing import Optional, Tuple
+from typing import *
 from aiogram.fsm.state import State
 from aiogram import Router, F
 from aiogram.dispatcher.event.handler import CallableObject, CallbackType
@@ -10,6 +10,7 @@ from aiogram.dispatcher.event.telegram import TelegramEventObserver
 from dataclasses import dataclass
 from functools import partial, wraps
 from uuid import uuid1
+from aoq_automation.database.models import *
 
 
 class StateValue(Filter):
@@ -74,6 +75,7 @@ class SurveyQuestion:
     welcome_message: str = "Enter value for {key}"
     invalidation_message: str = '"{response}" is invalid value for {key}, try again'
     keyboard_markup: Optional[ReplyKeyboardMarkup] = None
+    save: bool = True
 
     def __post_init__(self) -> None:
         if not isinstance(self.filterset, Filterset):
@@ -125,7 +127,7 @@ class Survey(RouterBuilder):
             text=self.questions[step].welcome_message.format(
                 key=self.questions[step].key
             ),
-            reply_markup=self.questions[step].keyboard_markup,
+            reply_markup=self.questions[step].keyboard_markup or ReplyKeyboardRemove(),
         )
 
     async def _send_invalidation_message(self, message: Message, step: int) -> None:
@@ -133,13 +135,13 @@ class Survey(RouterBuilder):
             text=self.questions[step].invalidation_message.format(
                 response=message.text, key=self.questions[step].key
             ),
-            reply_markup=self.questions[step].keyboard_markup,
+            reply_markup=self.questions[step].keyboard_markup or ReplyKeyboardRemove(),
         )
 
     def as_routers(self) -> Tuple[Router, Router]:
         """
-        Returns two routers: router that handling successful updates, and router for invalid update
-        Second router (fr) must be chained to fallback_router in main module
+        Returns two routers: router that handles successful updates, and router for invalid updates
+        Second router (fr) should be chained to fallback_router in main module
         """
 
         r = Router()
@@ -157,7 +159,9 @@ class Survey(RouterBuilder):
         async def on_correct_input(
             step: int, message: Message, state: FSMContext, **kwargs
         ) -> None:
-            await state.update_data({question.key: message.text})
+            question = self.questions[step]
+            if question.save:
+                await state.update_data({question.key: message.text})
             if step == len(self.questions) - 1:
                 await state.update_data({self.step_key: None})
                 await self.on_exit.call(message, state, **kwargs)
@@ -209,3 +213,15 @@ def redirect_to(callback: CallbackType):
         return wrapper
 
     return decorator
+
+
+def as_model_parameter(model: Type[Base], parameter: str) -> bool:
+    async def filter(message: Message, state: FSMContext) -> bool:
+        try:
+            value = model(**{parameter: message.text}).__getattribute__(parameter)
+            await state.update_data({parameter: value})
+            return True
+        except ValueError:
+            return False
+
+    return filter

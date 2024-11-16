@@ -56,7 +56,7 @@ class QItem(Base):
     p_anidb: Mapped["PQItemAniDB"] = relationship(cascade="all, delete")
 
     __table_args__ = (
-        UniqueConstraint("category", "number", name="_category_number_uc"),
+        UniqueConstraint("anime_id", "category", "number", name="_category_number_uc"),
     )
 
     @validates("category")
@@ -107,7 +107,9 @@ class QItemSourceTiming(Base):
     qitem_source: Mapped["QItemSource"] = relationship(back_populates="timings")
 
     @classmethod
-    def validate_timestamp(cls, key: str, value: str) -> float:
+    def validate_timestamp(cls, key: str, value: str | float) -> float:
+        if isinstance(value, float) and value >= 0:
+            return value
         possible_formats = [
             "%H:%M:%S.%f",
             "%M:%S.%f",
@@ -132,12 +134,12 @@ class QItemSourceTiming(Base):
 
     @validates("guess_start")
     @raises_only(ValueError)
-    def validate_guess_start(self, key: str, value: str) -> float:
+    def validate_guess_start(self, key: str, value: str | float) -> float:
         return QItemSourceTiming.validate_timestamp(key, value)
 
     @validates("reveal_start")
     @raises_only(ValueError)
-    def validate_reveal_start(self, key: str, value: str) -> float:
+    def validate_reveal_start(self, key: str, value: str | float) -> float:
         return QItemSourceTiming.validate_timestamp(key, value)
 
 

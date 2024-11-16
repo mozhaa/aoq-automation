@@ -9,7 +9,7 @@ from typing import *
 from .markups import *
 from .preactions import *
 from aoq_automation.database.models import *
-from .utils import Survey, SurveyQuestion, Filterset, redirect_to
+from .utils import Survey, SurveyQuestion, Filterset, redirect_to, as_model_parameter
 from sqlalchemy import select
 from aoq_automation.database.tools import get_or_create
 from aoq_automation.database.database import db
@@ -110,10 +110,12 @@ async def qitems_page(message: Message, state: FSMContext) -> None:
         anime = await session.get(Anime, anime_id)
         qitems = await anime.awaitable_attrs.qitems
         qitems_repr = [f"{qitem.category} {qitem.number}" for qitem in qitems]
-        await state.update_data(qitems=qitems_repr)
         qitems_keyboard = await state.get_value(
             "qitems_keyboard", QItemsKeyboardMarkup(qitems_repr)
         )
+        if qitems_repr != qitems_keyboard.qitems:
+            qitems_keyboard = QItemsKeyboardMarkup(qitems_repr)
+        await state.update_data(qitems=qitems_repr)
         await state.update_data(qitems_keyboard=qitems_keyboard)
         await message.answer(
             text=f"You're on QItems page!",
@@ -140,11 +142,13 @@ async def qitems_page_previous_page(message: Message, state: FSMContext) -> None
 @router.message(Form.qitems_page, AsQItem())
 async def qitem_page(message: Message, state: FSMContext) -> None:
     await state.set_state(Form.qitem_page)
-    category = await state.get_value("category")
-    number = await state.get_value("number")
+    values = await state.get_data()
+    category = values["category"]
+    number = values["number"]
+    anime_id = values["anime_id"]
     async with db.async_session() as session:
         qitem = await session.execute(
-            select(QItem).filter_by(category=category, number=number)
+            select(QItem).filter_by(anime_id=anime_id, category=category, number=number)
         )
         qitem = qitem.scalar_one()
         if qitem is None:
@@ -153,6 +157,106 @@ async def qitem_page(message: Message, state: FSMContext) -> None:
             text=f"You're on QItem page: {qitem.category} {qitem.number}",
             reply_markup=qitem_markup,
         )
+
+
+@redirect_to(qitem_page)
+async def add_qitem(message: Message, state: FSMContext) -> None:
+    values = await state.get_data()
+    print(values.keys())
+    print(values)
+    async with db.async_session() as session:
+        qitem = QItem(
+            anime_id=values["anime_id"],
+            category=values["category"],
+            number=values["number"],
+        )
+        session.add(qitem)
+        added_by = f"manual_{message.from_user.id}"
+
+        qitem_source = QItemSource(
+            qitem=qitem,
+            platform="youtube",
+            path=values["path"],
+            added_by=added_by,
+        )
+        session.add(qitem_source)
+
+        qitem_difficulty = QItemDifficulty(
+            qitem=qitem,
+            value=values["value"],
+            added_by=added_by,
+        )
+        session.add(qitem_difficulty)
+
+        qitem_timing = QItemSourceTiming(
+            qitem_source=qitem_source,
+            guess_start=values["guess_start"],
+            reveal_start=values["reveal_start"],
+            added_by=added_by,
+        )
+        session.add(qitem_timing)
+        try:
+            await session.commit()
+        except:
+            await message.answer(
+                text=f"Quiz Item {values["category"]} {values["number"]} already exists. Delete or edit it, and try again."
+            )
+    await state.update_data(
+        category=values["category"],
+        number=values["number"],
+    )
+
+
+Survey(
+    questions=[
+        SurveyQuestion(
+            key="category",
+            filterset=as_model_parameter(QItem, "category"),
+            keyboard_markup=ReplyKeyboardMarkup(
+                keyboard=[
+                    [KeyboardButton(text="Opening"), KeyboardButton(text="Ending")]
+                ]
+            ),
+            save=False,
+        ),
+        SurveyQuestion(
+            key="number",
+            filterset=as_model_parameter(QItem, "number"),
+            save=False,
+        ),
+        SurveyQuestion(
+            key="difficulty",
+            filterset=as_model_parameter(QItemDifficulty, "value"),
+            keyboard_markup=ReplyKeyboardMarkup(
+                keyboard=[
+                    [KeyboardButton(text="Very Easy"), KeyboardButton(text="Easy")],
+                    [KeyboardButton(text="Medium")],
+                    [KeyboardButton(text="Hard"), KeyboardButton(text="Very Hard")],
+                ]
+            ),
+            save=False,
+        ),
+        SurveyQuestion(
+            key="source",
+            filterset=as_model_parameter(QItemSource, "path"),
+            save=False,
+        ),
+        SurveyQuestion(
+            key="guess_start",
+            filterset=as_model_parameter(QItemSourceTiming, "guess_start"),
+            save=False,
+        ),
+        SurveyQuestion(
+            key="reveal_start",
+            filterset=as_model_parameter(QItemSourceTiming, "reveal_start"),
+            save=False,
+        ),
+    ],
+    on_exit=add_qitem,
+    on_cancel=qitems_page,
+    state=Form.adding_qitem,
+    enter_filterset=(F.text == "Add new"),
+).include_into(router, fallback_router)
 
 
 keys = ["category", "number", "difficulty", "source", "guess time", "reveal time"]
