@@ -101,19 +101,20 @@ Survey(
 ).include_into(router, fallback_router)
 
 
-@router.message(Form.anime_page, F.text == "Manage OP & ED", GetQItems())
+@router.message(Form.anime_page, F.text == "Manage OP & ED")
 @router.message(Form.qitem_page, F.text == "Back to OP & ED page")
 async def qitems_page(message: Message, state: FSMContext) -> None:
     await state.set_state(Form.qitems_page)
-    state_data = await state.get_data()
-    mal_url = state_data["mal_url"]
-    qitems = await state.get_value("qitems")
-    qitems_keyboard = state_data.get("qitems_keyboard", QItemsKeyboardMarkup(qitems))
-    await state.update_data(qitems_keyboard=qitems_keyboard)
-    await message.answer(
-        text=f"You're on QItems page! Anime URL: {mal_url}",
-        reply_markup=qitems_keyboard.as_markup(),
-    )
+    anime_id = await state.get_value("anime_id")
+    async with db.async_session() as session:
+        anime = await session.get(Anime, anime_id)
+        qitems = await anime.awaitable_attrs.qitems
+        qitems_keyboard = await state.get_value("qitems_keyboard", QItemsKeyboardMarkup(qitems))
+        await state.update_data(qitems_keyboard=qitems_keyboard)
+        await message.answer(
+            text=f"You're on QItems page!",
+            reply_markup=qitems_keyboard.as_markup(),
+        )
 
 
 @router.message(Form.qitems_page, F.text == "Next page")

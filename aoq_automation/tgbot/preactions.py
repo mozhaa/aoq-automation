@@ -30,28 +30,6 @@ class AsMALUrl(Preaction):
         return True
 
 
-class GetQItems(Preaction):
-    async def __call__(self, message: Message, state: FSMContext) -> bool:
-        # TODO: database query
-        qitems = [
-            "OP 1",
-            "OP 2",
-            "OP 3",
-            "ED 1",
-            "ED 2",
-            "ED 3",
-            "OP 1",
-            "OP 2",
-            "OP 3",
-            "ED 1",
-            "ED 2",
-            "ED 3",
-        ]
-
-        await state.update_data(qitems=qitems)
-        return True
-
-
 class AsQItem(Preaction):
     """
     Interpret message as QItem representation (category + number, f.e. "OP 3") and save it into state["qitem"]
