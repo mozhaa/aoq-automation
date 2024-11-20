@@ -9,7 +9,8 @@ from typing import *
 from .markups import *
 from .preactions import *
 from aoq_automation.database.models import *
-from .utils import Survey, SurveyQuestion, Filterset, redirect_to, as_model_parameter
+from .utils import *
+from .survey import *
 from sqlalchemy import select
 from aoq_automation.database.tools import get_or_create
 from aoq_automation.database.database import db
@@ -153,6 +154,7 @@ async def qitem_page(message: Message, state: FSMContext) -> None:
         qitem = qitem.scalar_one()
         if qitem is None:
             return await qitems_page(message, state)
+        await state.update_data(qitem_id=qitem.id)
         await message.answer(
             text=f"You're on QItem page: {qitem.category} {qitem.number}",
             reply_markup=qitem_markup,
@@ -162,53 +164,22 @@ async def qitem_page(message: Message, state: FSMContext) -> None:
 @redirect_to(qitem_page)
 async def add_qitem(message: Message, state: FSMContext) -> None:
     values = await state.get_data()
-    print(values.keys())
-    print(values)
-    async with db.async_session() as session:
-        qitem = QItem(
-            anime_id=values["anime_id"],
-            category=values["category"],
-            number=values["number"],
+    added_by = get_user_mark(message)
+    success = await save_qitem_from_dict(values, added_by)
+    if not success:
+        await message.answer(
+            text=f"Quiz Item {values["category"]} {values["number"]} already exists. Delete or edit it, and try again."
         )
-        session.add(qitem)
-        added_by = f"manual_{message.from_user.id}"
-
-        qitem_source = QItemSource(
-            qitem=qitem,
-            platform="youtube",
-            path=values["path"],
-            added_by=added_by,
-        )
-        session.add(qitem_source)
-
-        qitem_difficulty = QItemDifficulty(
-            qitem=qitem,
-            value=values["value"],
-            added_by=added_by,
-        )
-        session.add(qitem_difficulty)
-
-        qitem_timing = QItemSourceTiming(
-            qitem_source=qitem_source,
-            guess_start=values["guess_start"],
-            reveal_start=values["reveal_start"],
-            added_by=added_by,
-        )
-        session.add(qitem_timing)
-        try:
-            await session.commit()
-        except:
-            await message.answer(
-                text=f"Quiz Item {values["category"]} {values["number"]} already exists. Delete or edit it, and try again."
-            )
     await state.update_data(
         category=values["category"],
         number=values["number"],
     )
 
 
-Survey(
-    questions=[
+parameter_questions = [
+    (
+        "category",  # key for state
+        "category",  # text on button
         SurveyQuestion(
             key="category",
             filterset=as_model_parameter(QItem, "category"),
@@ -219,13 +190,21 @@ Survey(
             ),
             save=False,
         ),
+    ),
+    (
+        "number",
+        "number",
         SurveyQuestion(
             key="number",
             filterset=as_model_parameter(QItem, "number"),
             save=False,
         ),
+    ),
+    (
+        "value",
+        "difficulty",
         SurveyQuestion(
-            key="difficulty",
+            key="value",
             filterset=as_model_parameter(QItemDifficulty, "value"),
             keyboard_markup=ReplyKeyboardMarkup(
                 keyboard=[
@@ -236,57 +215,43 @@ Survey(
             ),
             save=False,
         ),
+    ),
+    (
+        "path",
+        "source",
         SurveyQuestion(
-            key="source",
+            key="path",
             filterset=as_model_parameter(QItemSource, "path"),
             save=False,
         ),
+    ),
+    (
+        "guess_start",
+        "guess start",
         SurveyQuestion(
             key="guess_start",
             filterset=as_model_parameter(QItemSourceTiming, "guess_start"),
             save=False,
         ),
+    ),
+    (
+        "reveal_start",
+        "reveal start",
         SurveyQuestion(
             key="reveal_start",
             filterset=as_model_parameter(QItemSourceTiming, "reveal_start"),
             save=False,
         ),
-    ],
+    ),
+]
+
+Survey(
+    questions=[q[2] for q in parameter_questions],
     on_exit=add_qitem,
     on_cancel=qitems_page,
     state=Form.adding_qitem,
     enter_filterset=(F.text == "Add new"),
 ).include_into(router, fallback_router)
-
-
-keys = ["category", "number", "difficulty", "source", "guess time", "reveal time"]
-filtersets = [
-    Filterset(F.text.in_(["OP", "ED"])),
-    Filterset(F.text.regexp("^[0-9]*$")),
-    Filterset(
-        [
-            [F.text.regexp("^[0-9]*$"), F.func(lambda s: int(s) > 0 and int(s) <= 100)],
-            [F.text.in_(["Very easy", "Easy", "Medium", "Hard", "Very hard"])],
-        ]
-    ),
-    Filterset(F.text),
-    Filterset(F.text),
-    Filterset([F.text, F.func(lambda x: False)]),
-]
-
-for key, filterset in zip(keys, filtersets):
-    Survey(
-        questions=[
-            SurveyQuestion(
-                key=key,
-                filterset=filterset,
-            )
-        ],
-        on_exit=qitem_page,
-        on_cancel=qitem_page,
-        state=Form.editing_parameter,
-        enter_filterset=[[Form.qitem_page, F.text == f"Edit {key}"]],
-    ).include_into(router, fallback_router)
 
 
 @fallback_router.message(Form.menu)
