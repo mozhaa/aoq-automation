@@ -16,9 +16,8 @@ anime_page_markup = ReplyKeyboardMarkup(
 )
 qitem_markup = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text="Edit category"), KeyboardButton(text="Edit number")],
-        [KeyboardButton(text="Edit difficulty"), KeyboardButton(text="Edit source")],
-        [KeyboardButton(text="Edit guess time"), KeyboardButton(text="Edit reveal time")],
+        # [KeyboardButton(text="Edit label"), KeyboardButton(text="difficulty")],
+        # [KeyboardButton(text="Edit source")],
         [KeyboardButton(text="Back to OP & ED page")],
         [KeyboardButton(text="Back to Anime page")],
         [KeyboardButton(text="Back to menu")],

@@ -161,6 +161,66 @@ async def qitem_page(message: Message, state: FSMContext) -> None:
         )
 
 
+parameter_questions = {
+    "category": SurveyQuestion(
+        key="category",
+        filterset=as_model_parameter(QItem, "category"),
+        keyboard_markup=ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text="Opening"), KeyboardButton(text="Ending")]]
+        ),
+        save=False,
+    ),
+    "number": SurveyQuestion(
+        key="number",
+        filterset=as_model_parameter(QItem, "number"),
+        save=False,
+    ),
+    "difficulty": SurveyQuestion(
+        key="value",
+        filterset=as_model_parameter(QItemDifficulty, "value"),
+        keyboard_markup=ReplyKeyboardMarkup(
+            keyboard=[
+                [KeyboardButton(text="Very Easy"), KeyboardButton(text="Easy")],
+                [KeyboardButton(text="Medium")],
+                [KeyboardButton(text="Hard"), KeyboardButton(text="Very Hard")],
+            ]
+        ),
+        save=False,
+    ),
+    "source": SurveyQuestion(
+        key="path",
+        filterset=as_model_parameter(QItemSource, "path"),
+        save=False,
+    ),
+    "guess_start": SurveyQuestion(
+        key="guess_start",
+        filterset=as_model_parameter(QItemSourceTiming, "guess_start"),
+        save=False,
+    ),
+    "reveal_start": SurveyQuestion(
+        key="reveal_start",
+        filterset=as_model_parameter(QItemSourceTiming, "reveal_start"),
+        save=False,
+    ),
+}
+
+
+editing_question_suites = {
+    "label": [
+        parameter_questions["category"],
+        parameter_questions["number"],
+    ],
+    "difficulty": [
+        parameter_questions["difficulty"],
+    ],
+    "source": [
+        parameter_questions["source"],
+        parameter_questions["guess_start"],
+        parameter_questions["reveal_start"],
+    ],
+}
+
+
 @redirect_to(qitem_page)
 async def add_qitem(message: Message, state: FSMContext) -> None:
     values = await state.get_data()
@@ -176,77 +236,8 @@ async def add_qitem(message: Message, state: FSMContext) -> None:
     )
 
 
-parameter_questions = [
-    (
-        "category",  # key for state
-        "category",  # text on button
-        SurveyQuestion(
-            key="category",
-            filterset=as_model_parameter(QItem, "category"),
-            keyboard_markup=ReplyKeyboardMarkup(
-                keyboard=[
-                    [KeyboardButton(text="Opening"), KeyboardButton(text="Ending")]
-                ]
-            ),
-            save=False,
-        ),
-    ),
-    (
-        "number",
-        "number",
-        SurveyQuestion(
-            key="number",
-            filterset=as_model_parameter(QItem, "number"),
-            save=False,
-        ),
-    ),
-    (
-        "value",
-        "difficulty",
-        SurveyQuestion(
-            key="value",
-            filterset=as_model_parameter(QItemDifficulty, "value"),
-            keyboard_markup=ReplyKeyboardMarkup(
-                keyboard=[
-                    [KeyboardButton(text="Very Easy"), KeyboardButton(text="Easy")],
-                    [KeyboardButton(text="Medium")],
-                    [KeyboardButton(text="Hard"), KeyboardButton(text="Very Hard")],
-                ]
-            ),
-            save=False,
-        ),
-    ),
-    (
-        "path",
-        "source",
-        SurveyQuestion(
-            key="path",
-            filterset=as_model_parameter(QItemSource, "path"),
-            save=False,
-        ),
-    ),
-    (
-        "guess_start",
-        "guess start",
-        SurveyQuestion(
-            key="guess_start",
-            filterset=as_model_parameter(QItemSourceTiming, "guess_start"),
-            save=False,
-        ),
-    ),
-    (
-        "reveal_start",
-        "reveal start",
-        SurveyQuestion(
-            key="reveal_start",
-            filterset=as_model_parameter(QItemSourceTiming, "reveal_start"),
-            save=False,
-        ),
-    ),
-]
-
 Survey(
-    questions=[q[2] for q in parameter_questions],
+    questions=[q for q in parameter_questions.values()],
     on_exit=add_qitem,
     on_cancel=qitems_page,
     state=Form.adding_qitem,
@@ -254,9 +245,67 @@ Survey(
 ).include_into(router, fallback_router)
 
 
+# for key, question_suite in editing_question_suites.items():
+#     Survey(
+#         questions=question_suite,
+#         on_exit=edit_parameter(key=key),
+#         on_cancel=qitem_page,
+#         state=Form.editing_parameter,
+#         enter_filterset=[[Form.qitem_page, F.text == f"Edit {key}"]],
+#     ).include_into(router, fallback_router)
+
+# def edit_parameter(key: str) -> Callable:
+#     @redirect_to(qitem_page)
+#     async def wrapped(message: Message, state: FSMContext) -> None:
+#         values = await state.get_data()
+#         added_by = get_user_mark(message)
+#         parameter = values[key]
+#         qitem_id = values["qitem_id"]
+#         async with db.async_session() as session:
+#             qitem = await session.get(QItem, qitem_id)
+#             if key in ["category", "number"]:
+#                 qitem.__setattr__(key, parameter)
+#             elif key == "value":
+#                 qitem_difficulties = await qitem.awaitable_attrs.difficulties
+#                 found = False
+#                 for diff in qitem_difficulties:
+#                     if diff.added_by == added_by:
+#                         diff.__setattr__(key, parameter)
+#                         found = True
+#                         break
+#                 if not found:
+#                     diff = QItemDifficulty(
+#                         qitem=qitem,
+#                         value=parameter
+#                     )
+#                     session.add(diff)
+#             elif key == "source":
+#                 qitem_sources = await qitem.awaitable_attrs.sources
+#                 found = False
+#                 for src in qitem_sources:
+#                     if src.added_by == added_by:
+#                         src.__setattr__(key, parameter)
+#                         found = True
+#                         break
+#                 qitem.__setattr__(key, parameter)
+#             elif key in ["guess_start", "reveal_start"]:
+
+#             category, number = qitem.category, qitem.number
+#             try:
+#                 await session.commit()
+#                 await state.update_data(category=category, number=number)
+#             except:
+#                 await message.answer(
+#                     text=f"Quiz Item {category} {number} already exists. Delete or edit it, and try again."
+#                 )
+
+#     return wrapped
+
+
 @fallback_router.message(Form.menu)
 @fallback_router.message(Form.anime_page)
 @fallback_router.message(Form.qitems_page)
+@fallback_router.message(Form.qitem_page)
 async def invalid_menu_option(message: Message, state: FSMContext) -> None:
     await message.reply(text=f"No such option: {message.text}")
 
