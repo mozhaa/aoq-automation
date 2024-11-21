@@ -1,7 +1,9 @@
-from aoq_automation.parser import MALPageParser
 from pathlib import Path
-from pyquery import PyQuery
+
 import pytest
+from pyquery import PyQuery
+
+from aoq_automation.webparse.mal import MALPageParser
 
 
 @pytest.mark.asyncio

@@ -1,18 +1,20 @@
+import inspect
+import sys
+from datetime import datetime
+from typing import List
+
 from sqlalchemy import ForeignKey, UniqueConstraint, func
+from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import (
-    relationship,
+    DeclarativeBase,
     Mapped,
     mapped_column,
-    DeclarativeBase,
+    relationship,
     validates,
 )
 from sqlalchemy.schema import CreateTable
-from sqlalchemy.ext.asyncio import AsyncAttrs
-from typing import List
-from datetime import datetime
-from .utils import raises_only
-import sys
-import inspect
+
+from .utils import parse_time_as_seconds, raises_only
 
 
 class Base(AsyncAttrs, DeclarativeBase):
@@ -110,27 +112,10 @@ class QItemSourceTiming(Base):
     def validate_timestamp(cls, key: str, value: str | float) -> float:
         if isinstance(value, float) and value >= 0:
             return value
-        possible_formats = [
-            "%H:%M:%S.%f",
-            "%M:%S.%f",
-            "%S.%f",
-            "%H:%M:%S",
-            "%M:%S",
-            "%S",
-        ]
-        seconds = None
-        for format in possible_formats:
-            try:
-                t = datetime.strptime(value, format).time()
-                seconds = (
-                    t.microsecond / 1000000 + t.second + 60 * (t.minute + 60 * (t.hour))
-                )
-                break
-            except ValueError:
-                continue
-        if seconds is not None:
-            return seconds
-        invalidate(key, value)
+        try:
+            return parse_time_as_seconds(value)
+        except ValueError:
+            invalidate(key, value)
 
     @validates("guess_start")
     @raises_only(ValueError)

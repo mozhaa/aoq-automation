@@ -1,7 +1,10 @@
-from aiohttp import ClientSession
-from ..utils import pget, text_without_span
-from aoq_automation.database.models import PAnimeMAL
 from functools import cached_property
+
+from aiohttp import ClientSession
+
+from aoq_automation.database.models import PAnimeMAL
+
+from ...webparse.utils import pget, text_without_span
 
 
 class MALPageParser:

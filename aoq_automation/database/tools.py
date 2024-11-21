@@ -1,7 +1,9 @@
-from sqlalchemy import select
 from typing import *
-from .models import Base
+
+from sqlalchemy import select
+
 from .database import db
+from .models import Base
 
 
 def retrieve_key_columns(obj: Base, key_columns: List[str]) -> Dict[str, Any]:

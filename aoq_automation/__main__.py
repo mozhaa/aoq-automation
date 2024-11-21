@@ -1,6 +1,8 @@
-from . import start, db
-import asyncio
 import argparse
+import asyncio
+
+from aoq_automation.database.database import db
+from aoq_automation.telegram.start import start
 
 
 async def main() -> None:

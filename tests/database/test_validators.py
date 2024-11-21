@@ -1,5 +1,6 @@
-from aoq_automation.database.models import *
 import pytest
+
+from aoq_automation.database.models import *
 
 
 def test_category():

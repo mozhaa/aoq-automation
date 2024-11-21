@@ -1,10 +1,12 @@
-from aiogram.types import Message
-from aiogram.fsm.context import FSMContext
-from typing import *
-from aiogram.dispatcher.event.handler import CallableObject, CallbackType
 from functools import wraps
-from aoq_automation.database.models import *
+from typing import *
+
+from aiogram.dispatcher.event.handler import CallableObject, CallbackType
+from aiogram.fsm.context import FSMContext
+from aiogram.types import Message
+
 from aoq_automation.database.database import db
+from aoq_automation.database.models import *
 
 
 def redirect_to(callback: CallbackType):

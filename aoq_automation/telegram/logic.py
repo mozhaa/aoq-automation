@@ -1,20 +1,22 @@
-from aiogram import Bot, Dispatcher, Router, F
-from aiogram.fsm.storage.memory import MemoryStorage
+from typing import *
+
+from aiogram import Bot, Dispatcher, F, Router
+from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup, default_state
-from aiogram.filters import Command
+from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import Message
+from sqlalchemy import select
+
 from aoq_automation.config import config
-from typing import *
+from aoq_automation.database.database import db
+from aoq_automation.database.models import *
+from aoq_automation.database.tools import get_or_create
+
 from .markups import *
 from .preactions import *
-from aoq_automation.database.models import *
-from .utils import *
 from .survey import *
-from sqlalchemy import select
-from aoq_automation.database.tools import get_or_create
-from aoq_automation.database.database import db
-
+from .utils import *
 
 bot = Bot(token=config["telegram"]["token"])
 dp = Dispatcher(storage=MemoryStorage())

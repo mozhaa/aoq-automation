@@ -1,10 +1,8 @@
 from sqlalchemy import URL
-from sqlalchemy.ext.asyncio import (
-    async_sessionmaker,
-    create_async_engine,
-    AsyncSession,
-)
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
 from aoq_automation.config import config
+
 from .models import Base
 
 

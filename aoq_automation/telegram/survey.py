@@ -1,14 +1,16 @@
-from aiogram.filters import Filter
-from aiogram.types import Message, ReplyKeyboardMarkup, ReplyKeyboardRemove
-from aiogram.fsm.context import FSMContext
-from typing import *
-from aiogram.fsm.state import State
-from aiogram import Router, F
-from aiogram.dispatcher.event.handler import CallableObject, CallbackType
-from aiogram.dispatcher.event.telegram import TelegramEventObserver
 from dataclasses import dataclass
 from functools import partial
+from typing import *
 from uuid import uuid1
+
+from aiogram import F, Router
+from aiogram.dispatcher.event.handler import CallableObject, CallbackType
+from aiogram.dispatcher.event.telegram import TelegramEventObserver
+from aiogram.filters import Filter
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State
+from aiogram.types import Message, ReplyKeyboardMarkup, ReplyKeyboardRemove
+
 from aoq_automation.database.models import *
 
 
@@ -201,5 +203,3 @@ class Survey(RouterBuilder):
         nr, nfr = self.as_routers()
         r.include_router(nr)
         fr.include_router(nfr)
-
-

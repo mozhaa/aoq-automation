@@ -1,8 +1,10 @@
-from aiogram.filters import Filter
-from aiogram.types import Message
-from aiogram.fsm.context import FSMContext
 from typing import *
-from aoq_automation.parser import MALPageParser, MALUrlParser
+
+from aiogram.filters import Filter
+from aiogram.fsm.context import FSMContext
+from aiogram.types import Message
+
+from aoq_automation.webparse.mal import MALPageParser, MALUrlParser
 
 
 class Preaction(Filter):
