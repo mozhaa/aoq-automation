@@ -17,7 +17,7 @@ async def test_page_1():
     )
     assert page.title_ro == "Raise wa Tanin ga Ii"
 
-
+    
 @pytest.mark.asyncio
 async def test_page_2():
     url = "https://myanimelist.net/anime/457"

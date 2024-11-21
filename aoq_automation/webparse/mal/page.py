@@ -4,7 +4,7 @@ from aiohttp import ClientSession
 
 from aoq_automation.database.models import PAnimeMAL
 
-from ...webparse.utils import pget, text_without_span
+from ...webparse.utils import InvalidURLError, default, pget, text_without_span
 
 
 class MALPageParser:
@@ -17,20 +17,8 @@ class MALPageParser:
                 self._main_page = await pget(session=session, url=self._url)
                 self._stats_page = await pget(session=session, url=self.stats_url)
                 self._valid = True
-            except:
+            except InvalidURLError:
                 self._valid = False
-
-    @property
-    def valid(self) -> bool:
-        return self._valid
-
-    @property
-    def url(self) -> str:
-        return self._url
-
-    @cached_property
-    def stats_url(self) -> str:
-        return self._main_page.find('a:contains("Stats")').attr.href
 
     def as_parsed(self) -> PAnimeMAL:
         return PAnimeMAL(
@@ -49,11 +37,26 @@ class MALPageParser:
             on_hold=self.on_hold,
         )
 
+    @property
+    def valid(self) -> bool:
+        return self._valid
+
+    @property
+    def url(self) -> str:
+        return self._url
+
+    @cached_property
+    def stats_url(self) -> str:
+        return self._main_page.find('a:contains("Stats")').attr.href
+
     @cached_property
     def title_ro(self) -> str:
         return self._main_page.find("div.h1-title h1.title-name > strong").eq(0).text()
 
     @cached_property
+    @default(
+        "https://moe.shikimori.one/uploads/poster/animes/49603/main-60ad2591305ea0490f90fd90f48c63d2.webp"
+    )
     def poster_url(self) -> str:
         return (
             self._main_page.find('.leftside a img[itemprop="image"]')
@@ -62,7 +65,7 @@ class MALPageParser:
         )
 
     @cached_property
-    def title_en(self):
+    def title_en(self) -> str:
         return text_without_span(
             self._main_page.find('.js-alternative-titles span:contains("English:")').eq(
                 0
@@ -70,16 +73,20 @@ class MALPageParser:
         )
 
     @cached_property
-    def rating(self):
+    @default(5)
+    def rating(self) -> float:
         return float(self._main_page.find('span[itemprop="ratingValue"]').text())
 
     @cached_property
-    def ratings_count(self):
+    @default(0)
+    def ratings_count(self) -> int:
         return int(
             self._main_page.find('span[itemprop="ratingCount"]').text().replace(",", "")
         )
 
-    def _get_int_from_spaceit_pad(self, span_content: str, stats_page: bool = False):
+    def _get_int_from_spaceit_pad(
+        self, span_content: str, stats_page: bool = False
+    ) -> int:
         return int(
             text_without_span(
                 (self._stats_page if stats_page else self._main_page).find(
@@ -89,33 +96,41 @@ class MALPageParser:
         )
 
     @cached_property
-    def favorites(self):
+    @default(0)
+    def favorites(self) -> int:
         return self._get_int_from_spaceit_pad("Favorites:")
 
     @cached_property
-    def popularity(self):
+    @default(0)
+    def popularity(self) -> int:
         return self._get_int_from_spaceit_pad("Popularity:")
 
     @cached_property
-    def ranked(self):
+    @default(100000)
+    def ranked(self) -> int:
         return self._get_int_from_spaceit_pad("Ranked:")
 
     @cached_property
-    def watching(self):
+    @default(0)
+    def watching(self) -> int:
         return self._get_int_from_spaceit_pad("Watching:", stats_page=True)
 
     @cached_property
-    def completed(self):
+    @default(0)
+    def completed(self) -> int:
         return self._get_int_from_spaceit_pad("Completed:", stats_page=True)
 
     @cached_property
-    def plan_to_watch(self):
+    @default(0)
+    def plan_to_watch(self) -> int:
         return self._get_int_from_spaceit_pad("Plan to Watch:", stats_page=True)
 
     @cached_property
-    def dropped(self):
+    @default(0)
+    def dropped(self) -> int:
         return self._get_int_from_spaceit_pad("Dropped:", stats_page=True)
 
     @cached_property
-    def on_hold(self):
+    @default(0)
+    def on_hold(self) -> int:
         return self._get_int_from_spaceit_pad("On-Hold:", stats_page=True)

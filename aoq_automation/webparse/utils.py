@@ -1,8 +1,11 @@
 from aiohttp import ClientSession
 from asyncache import cached
+from functools import wraps
 from cachetools import LRUCache
 from cachetools.keys import hashkey
 from pyquery import PyQuery
+from typing import Any, List
+from aiogram.dispatcher.event.handler import CallableObject
 
 default_headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36"
@@ -34,3 +37,17 @@ def text_without_span(el) -> str:
         .replace(":", "")
         .split("\n")[0]
     )
+
+
+def default(value: Any):
+    def decorator(wrapped: CallableObject):
+        @wraps(wrapped)
+        def wrapper(*args, **kwargs):
+            try:
+                return wrapped(*args, **kwargs)
+            except:
+                return value
+
+        return wrapper
+
+    return decorator
