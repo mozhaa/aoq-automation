@@ -136,3 +136,7 @@ class ShikiPageParser:
     @default(0)
     def comments(self) -> int:
         return int(self._main_page.find('[title="Все комментарии"] > .count').eq(0).text())
+    
+    @cached_property
+    def anidb_url(self) -> str:
+        return self._main_page.find(".b-external_link.anime_db .b-link").eq(0).attr["data-href"]

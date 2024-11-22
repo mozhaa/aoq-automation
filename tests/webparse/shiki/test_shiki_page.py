@@ -100,3 +100,7 @@ def test_poster_thumbnail_url(page_1):
         page_1.poster_thumbnail_url
         == "https://moe.shikimori.one/uploads/poster/animes/590/main_alt-5605f29ae19a25d17ea5d456a29ff57d.jpeg"
     )
+
+
+def test_anidb_url(page_1):
+    assert page_1.anidb_url == "http://anidb.net/perl-bin/animedb.pl?show=anime&aid=4112"
