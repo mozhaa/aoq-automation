@@ -217,6 +217,7 @@ class PAnimeAniDB(Base):
     anime_id: Mapped[int] = mapped_column(ForeignKey("anime.id"))
 
     url: Mapped[str]
+    anidb_id: Mapped[int]
     airing_start: Mapped[datetime]
     airing_end: Mapped[datetime]
 
