@@ -1,14 +1,16 @@
+from functools import wraps
+from typing import Any
+
+from aiogram.dispatcher.event.handler import CallableObject
 from aiohttp import ClientSession
 from asyncache import cached
-from functools import wraps
 from cachetools import LRUCache
 from cachetools.keys import hashkey
 from pyquery import PyQuery
-from typing import Any, List
-from aiogram.dispatcher.event.handler import CallableObject
 
 default_headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36"
 }
 
 

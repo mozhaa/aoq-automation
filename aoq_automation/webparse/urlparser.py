@@ -1,9 +1,8 @@
+import re
 from abc import abstractmethod
-from functools import wraps
 from pathlib import PurePosixPath
 from typing import Callable
 from urllib.parse import urlparse, urlunparse
-import re
 
 
 def validator(wrapped: Callable):
@@ -16,7 +15,7 @@ def normalize_url(url: str) -> str:
     if "://" not in url:
         url = "https://" + url
     parsed_url = urlparse(url)
-    netloc = re.sub("^www\.", "", parsed_url.netloc)
+    netloc = re.sub("^www\\.", "", parsed_url.netloc)
     url = urlunparse(parsed_url._replace(netloc=netloc))
     return url
 

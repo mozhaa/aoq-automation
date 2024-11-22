@@ -30,7 +30,7 @@ class TraceFilter(Filter):
         value = message.text if self.key is None else await state.get_value(self.key)
         if self.key_preprocess is not None:
             value = self.key_preprocess(value)
-        await self.call(value, message, state, **kwargs)
+        return await self.call(value, message, state, **kwargs)
 
     @abstractmethod
     async def call(
