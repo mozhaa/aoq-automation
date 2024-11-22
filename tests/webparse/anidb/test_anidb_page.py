@@ -43,17 +43,33 @@ def page_1():
     return page
 
 
-def test_airing_start(page_1):
+@pytest.fixture
+def page_2():
+    page = AniDBPageParser("https://anidb.net/anime/14603")
+    with open(
+        Path(".") / "tests" / "files" / "anidb-dumbbell.html",
+        "r",
+        encoding="utf-8",
+    ) as f:
+        page._main_page = PyQuery(f.read())
+    return page
+
+
+def test_airing_start(page_1, page_2):
     assert page_1.airing_start == datetime(2018, 7, 14)
+    assert page_2.airing_start == datetime(2019, 7, 3)
 
 
-def test_airing_end(page_1):
+def test_airing_end(page_1, page_2):
     assert page_1.airing_end == datetime(2018, 9, 29)
+    assert page_2.airing_end == datetime(2019, 9, 18)
 
 
-def test_anidb_id(page_1):
+def test_anidb_id(page_1, page_2):
     assert page_1.anidb_id == 13734
+    assert page_2.anidb_id == 14603
 
 
-def test_mal_url(page_1):
+def test_mal_url(page_1, page_2):
     assert page_1.mal_url == "https://myanimelist.net/anime/37105"
+    assert page_2.mal_url == "https://myanimelist.net/anime/39026"

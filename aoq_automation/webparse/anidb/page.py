@@ -60,4 +60,9 @@ class AniDBPageParser(PageParser):
 
     @cached_property
     def mal_url(self) -> str:
-        return self._main_page.find(".i_resource_mal").attr["href"]
+        mal_buttons = self._main_page.find(".i_resource_mal")
+        href = mal_buttons.attr["href"]
+        if href is not None:
+            return href
+        else:
+            return mal_buttons.siblings("a").eq(0).attr["href"]
