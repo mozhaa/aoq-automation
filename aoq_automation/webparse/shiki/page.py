@@ -7,22 +7,37 @@ from aoq_automation.database.models import PAnimeShiki
 
 from ..pageparser import PageParser
 from ..utils import InvalidURLError, default, pget
+from .url import ShikiUrlParser
 
 
 class ShikiPageParser(PageParser):
     async def load_pages(self) -> None:
         async with ClientSession() as session:
+            self._valid = False
             try:
-                self._main_page = await pget(session=session, url=self.url)
-                if (
-                    self._main_page is None
-                    or len(self._main_page.find(".error-404").eq(0)) > 0
-                ):
-                    self._valid = False
-                else:
-                    self._valid = True
+                url = self.url
+                while True:
+                    self._main_page = await pget(session=session, url=url, ignore_status_code=True)
+                    if self._main_page is None:
+                        return
+                    errors = self._main_page.find(".error-404").eq(0)
+                    if len(errors) > 0:
+                        if errors.text() == "302":
+                            new_url = self._main_page.find(".dialog a").attr["href"]
+                            url_parser = ShikiUrlParser(new_url)
+                            if not url_parser.is_valid():
+                                return
+                            if url == url_parser.url:
+                                return
+                            url = url_parser.url
+                            continue
+                        else:
+                            return
+                    else:
+                        self._valid = True
+                        return
             except InvalidURLError:
-                self._valid = False
+                return
 
     def as_parsed(self) -> PAnimeShiki:
         return PAnimeShiki(

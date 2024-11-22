@@ -32,6 +32,22 @@ async def test_page_3():
     assert not page.valid
 
 
+@pytest.mark.asyncio
+async def test_page_4():
+    url = "https://shikimori.one/animes/y590-kage-kara-mamoru"
+    page = ShikiPageParser(url)
+    await page.load_pages()
+    assert page.valid
+
+
+@pytest.mark.asyncio
+async def test_page_5():
+    url = "https://shikimori.one/animes/590"
+    page = ShikiPageParser(url)
+    await page.load_pages()
+    assert page.valid
+
+
 @pytest.fixture
 def page_1():
     page = ShikiPageParser("https://shikimori.one/animes/y590-kage-kara-mamoru")
@@ -48,8 +64,8 @@ def test_rating(page_1):
     assert f"{page_1.rating:.2f}" == "6.53"
 
 
-def test_rating_count(page_1):
-    assert page_1.rating_count == 354
+def test_ratings_count(page_1):
+    assert page_1.ratings_count == 354
 
 
 def test_watching(page_1):
@@ -95,9 +111,9 @@ def test_poster_url(page_1):
     )
 
 
-def test_poster_thumbnail_url(page_1):
+def test_poster_thumb_url(page_1):
     assert (
-        page_1.poster_thumbnail_url
+        page_1.poster_thumb_url
         == "https://moe.shikimori.one/uploads/poster/animes/590/main_alt-5605f29ae19a25d17ea5d456a29ff57d.jpeg"
     )
 

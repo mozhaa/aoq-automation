@@ -256,20 +256,6 @@ astroid = ["astroid (>=1,<2)", "astroid (>=2,<4)"]
 test = ["astroid (>=1,<2)", "astroid (>=2,<4)", "pytest"]
 
 [[package]]
-name = "asyncache"
-version = "0.3.1"
-description = "Helpers to use cachetools with async code."
-optional = false
-python-versions = ">=3.8,<4.0"
-files = [
-    {file = "asyncache-0.3.1-py3-none-any.whl", hash = "sha256:ef20a1024d265090dd1e0785c961cf98b9c32cc7d9478973dcf25ac1b80011f5"},
-    {file = "asyncache-0.3.1.tar.gz", hash = "sha256:9a1e60a75668e794657489bdea6540ee7e3259c483517b934670db7600bf5035"},
-]
-
-[package.dependencies]
-cachetools = ">=5.2.0,<6.0.0"
-
-[[package]]
 name = "asyncpg"
 version = "0.30.0"
 description = "An asyncio PostgreSQL driver"
@@ -350,17 +336,6 @@ dev = ["cloudpickle", "hypothesis", "mypy (>=1.11.1)", "pre-commit", "pympler", 
 docs = ["cogapp", "furo", "myst-parser", "sphinx", "sphinx-notfound-page", "sphinxcontrib-towncrier", "towncrier (<24.7)"]
 tests = ["cloudpickle", "hypothesis", "mypy (>=1.11.1)", "pympler", "pytest (>=4.3.0)", "pytest-mypy-plugins", "pytest-xdist[psutil]"]
 tests-mypy = ["mypy (>=1.11.1)", "pytest-mypy-plugins"]
-
-[[package]]
-name = "cachetools"
-version = "5.5.0"
-description = "Extensible memoizing collections and decorators"
-optional = false
-python-versions = ">=3.7"
-files = [
-    {file = "cachetools-5.5.0-py3-none-any.whl", hash = "sha256:02134e8439cdc2ffb62023ce1debca2944c3f289d66bb17ead3ab3dede74b292"},
-    {file = "cachetools-5.5.0.tar.gz", hash = "sha256:2cc24fb4cbe39633fb7badd9db9ca6295d766d9c2995f245725a46715d050f2a"},
-]
 
 [[package]]
 name = "certifi"
@@ -2260,4 +2235,4 @@ httpx = ">=0.14.2"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.13"
-content-hash = "86d264bc12b0b7f44ab16879145fef9cc4575cac12d4bc4683f7a877fea5f2ca"
+content-hash = "1130a9b6bae09d00a5511214ab7060294dca9030d31694722380073f2c5c004a"

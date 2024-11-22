@@ -52,8 +52,9 @@ def test_timestamp():
         "00:01.12": 1.12,
         "00:00:00.2": 0.2,
         "13.5": 13.5,
+        1.5: 1.5,
     }
-    invalid = ["00.02.12", "00:00,5", "78.4", 1.5]
+    invalid = ["00.02.12", "00:00,5", "78.4"]
     for x, expected in valid.items():
         assert QItemSourceTiming(guess_start=x).guess_start == expected
     for x in invalid:

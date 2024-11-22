@@ -3,9 +3,6 @@ from typing import Any
 
 from aiogram.dispatcher.event.handler import CallableObject
 from aiohttp import ClientSession
-from asyncache import cached
-from cachetools import LRUCache
-from cachetools.keys import hashkey
 from pyquery import PyQuery
 
 default_headers = {
@@ -14,15 +11,17 @@ default_headers = {
 }
 
 
-class InvalidURLError(BaseException):
-    ...
+class InvalidURLError(BaseException): ...
 
 
-@cached(LRUCache(maxsize=32), key=lambda session, url: hashkey(url))
-async def pget(session: ClientSession, url: str) -> PyQuery:
-    """Cached GET request for web-page"""
-    async with session.get(url, headers=default_headers) as response:
-        if response.ok:
+async def pget(
+    session: ClientSession, url: str, ignore_status_code: bool = False
+) -> PyQuery:
+    """GET request for PyQuery'd web-page"""
+    async with session.get(
+        url, headers=default_headers, allow_redirects=True
+    ) as response:
+        if ignore_status_code or response.ok:
             return PyQuery(await response.text())
         raise InvalidURLError()
 
