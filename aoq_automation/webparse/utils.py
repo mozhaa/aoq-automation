@@ -14,7 +14,8 @@ default_headers = {
 }
 
 
-class InvalidURLError(BaseException): ...
+class InvalidURLError(BaseException):
+    ...
 
 
 @cached(LRUCache(maxsize=32), key=lambda session, url: hashkey(url))
