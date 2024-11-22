@@ -13,17 +13,18 @@ class AniDBUrlParser(UrlParser):
     @default(False)
     def _anime(self) -> bool:
         return self.anidb_id is not None
+    
+    @classmethod
+    def _url_from_anidb_id(cls, anidb_id: int) -> str:
+        return f"https://anidb.net/anime/{anidb_id}"
 
     @property
     def url(self) -> str:
-        return f"https://anidb.net/anime/{self.anidb_id}"
+        return AniDBUrlParser._url_from_anidb_id(self.anidb_id)
 
     @property
     def anidb_id(self) -> int:
         if self._path_parts[1] == "anime":
             return int(self._path_parts[2])
         else:
-            print(self._parsed_url.query)
-            print(parse_qs(self._parsed_url.query)["aid"])
-            print(parse_qs(self._parsed_url.query)["aid"][0])
             return int(parse_qs(self._parsed_url.query)["aid"][0])

@@ -4,13 +4,11 @@ from aiohttp import ClientSession
 
 from aoq_automation.database.models import PAnimeMAL
 
-from ...webparse.utils import InvalidURLError, default, pget, text_without_span
+from ..utils import InvalidURLError, default, pget, text_without_span
+from ..pageparser import PageParser
 
 
-class MALPageParser:
-    def __init__(self, url: str) -> None:
-        self._url = url
-
+class MALPageParser(PageParser):
     async def load_pages(self) -> None:
         async with ClientSession() as session:
             try:
@@ -41,10 +39,6 @@ class MALPageParser:
     def valid(self) -> bool:
         return self._valid
 
-    @property
-    def url(self) -> str:
-        return self._url
-
     @cached_property
     def stats_url(self) -> str:
         return self._main_page.find('a:contains("Stats")').attr.href
@@ -55,7 +49,8 @@ class MALPageParser:
 
     @cached_property
     @default(
-        "https://moe.shikimori.one/uploads/poster/animes/49603/main-60ad2591305ea0490f90fd90f48c63d2.webp"
+        "https://moe.shikimori.one/uploads/poster/animes/49603"
+        "/main-60ad2591305ea0490f90fd90f48c63d2.webp"
     )
     def poster_url(self) -> str:
         return (

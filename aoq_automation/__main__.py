@@ -8,8 +8,8 @@ from aoq_automation.telegram.start import start
 async def main() -> None:
     parser = argparse.ArgumentParser(prog="aoq-automation")
     parser.add_argument(
-        "--create-tables",
-        help="create tables in database (use this when database is new)",
+        "--recreate-tables",
+        help="recreate tables in database",
         action="store_true",
     )
     parser.add_argument(
@@ -21,8 +21,8 @@ async def main() -> None:
     
     db.connect(echo=args.verbose_sql)
     print("connected to database")
-    if args.create_tables:
-        await db.create_tables()
+    if args.recreate_tables:
+        await db.recreate_tables()
         print("tables created")
     print("starting polling")
     await start()

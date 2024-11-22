@@ -1,7 +1,7 @@
 import inspect
 import sys
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from sqlalchemy import ForeignKey, UniqueConstraint, func
 from sqlalchemy.ext.asyncio import AsyncAttrs
@@ -219,7 +219,7 @@ class PAnimeAniDB(Base):
     url: Mapped[str]
     anidb_id: Mapped[int]
     airing_start: Mapped[datetime]
-    airing_end: Mapped[datetime]
+    airing_end: Mapped[Optional[datetime]]
 
 
 class PQItemAniDB(Base):

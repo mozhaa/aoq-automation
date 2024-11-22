@@ -5,13 +5,11 @@ from aiohttp import ClientSession
 
 from aoq_automation.database.models import PAnimeShiki
 
-from ...webparse.utils import InvalidURLError, default, pget
+from ..pageparser import PageParser
+from ..utils import InvalidURLError, default, pget
 
 
-class ShikiPageParser:
-    def __init__(self, url: str) -> None:
-        self._url = url
-
+class ShikiPageParser(PageParser):
     async def load_pages(self) -> None:
         async with ClientSession() as session:
             try:
@@ -48,12 +46,8 @@ class ShikiPageParser:
         return self._valid
 
     @cached_property
-    def url(self) -> str:
-        return self._url
-
-    @cached_property
     @default("https://shikimori.one/assets/globals/missing/main.png")
-    def poster_thumbnail_url(self) -> str:
+    def poster_thumb_url(self) -> str:
         return self._main_page.find(".c-poster .b-image img").eq(0).attr.src
 
     @cached_property
@@ -63,7 +57,12 @@ class ShikiPageParser:
 
     @cached_property
     def titles(self) -> List[str]:
-        return list(map(lambda s: s.strip(), self._main_page.find("header.head > h1").eq(0).text().split("/")))
+        return list(
+            map(
+                lambda s: s.strip(),
+                self._main_page.find("header.head > h1").eq(0).text().split("/"),
+            )
+        )
 
     @cached_property
     def title_ru(self) -> str:
@@ -84,12 +83,12 @@ class ShikiPageParser:
     def rating(self) -> float:
         return (
             sum([int(stat[0]) * stat[1] for stat in self.scores_stats])
-            / self.rating_count
+            / self.ratings_count
         )
 
     @cached_property
     @default(0)
-    def rating_count(self) -> int:
+    def ratings_count(self) -> int:
         return sum([stat[1] for stat in self.scores_stats])
 
     @cached_property
@@ -135,8 +134,14 @@ class ShikiPageParser:
     @cached_property
     @default(0)
     def comments(self) -> int:
-        return int(self._main_page.find('[title="Все комментарии"] > .count').eq(0).text())
-    
+        return int(
+            self._main_page.find('[title="Все комментарии"] > .count').eq(0).text()
+        )
+
     @cached_property
     def anidb_url(self) -> str:
-        return self._main_page.find(".b-external_link.anime_db .b-link").eq(0).attr["data-href"]
+        return (
+            self._main_page.find(".b-external_link.anime_db .b-link")
+            .eq(0)
+            .attr["data-href"]
+        )

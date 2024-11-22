@@ -2,6 +2,7 @@ import re
 
 from ..urlparser import *
 from ..utils import default
+from typing import Self
 
 
 class ShikiUrlParser(UrlParser):
@@ -18,9 +19,13 @@ class ShikiUrlParser(UrlParser):
     def _path_parts(self) -> bool:
         return self._path_parts[1] == "animes" and self.mal_id is not None
 
+    @classmethod
+    def _url_from_mal_id(cls, mal_id: int) -> str:
+        return f"https://shikimori.one/animes/{mal_id}"
+        
     @property
     def url(self) -> str:
-        return f"https://shikimori.one/animes/{self.path_parts[2]}"
+        return ShikiUrlParser._url_from_mal_id(self.mal_id)
     
     @property
     def mal_id(self) -> int:
@@ -29,3 +34,7 @@ class ShikiUrlParser(UrlParser):
     @property
     def mal_url(self) -> str:
         return f"https://myanimelist.net/anime/{self.mal_id}"
+    
+    @classmethod
+    def from_mal_id(cls, mal_id: int) -> Self:
+        return cls(cls._url_from_mal_id(mal_id))

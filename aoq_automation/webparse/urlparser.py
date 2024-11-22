@@ -30,7 +30,6 @@ class UrlParser:
     def is_valid(self) -> bool:
         for name, method in self.__class__.__dict__.items():
             if hasattr(method, "_is_validator") and not method(self):
-                print(f"Validator {name} failed!")
                 return False
         return True
 
