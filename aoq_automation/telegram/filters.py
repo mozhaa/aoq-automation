@@ -15,7 +15,7 @@ from .filterset import Filterset
 
 class TraceFilter(Filter):
     """
-    Filter, that takes input either from message.text or state[key]
+    Filter, that takes input either from message.text (if key is None) or state[key].
     You can chain them, so that first will take message.text as input,
     and next ones will take inputs from state.
     """
@@ -38,15 +38,6 @@ class TraceFilter(Filter):
     ) -> bool: ...
 
 
-def partialclass(cls, *args, **kwargs):
-    """Partially initialize __init__ of some class"""
-
-    class NewCls(cls):
-        __init__ = partialmethod(cls.__init__, *args, **kwargs)
-
-    return NewCls
-
-
 class AsAnimeUrl(TraceFilter):
     def __init__(
         self,
@@ -59,9 +50,7 @@ class AsAnimeUrl(TraceFilter):
         self.url_parser = url_parser
         self.page_parser = page_parser
         self.output_key = output_key
-        self.input_key = input_key
-        self.input_key_preprocess = input_key_preprocess
-        super().__init__(key=input_key, key_preprocess=input_key_preprocess)       
+        super().__init__(key=input_key, key_preprocess=input_key_preprocess)
 
     async def call(
         self, value: str, message: Message, state: FSMContext, **kwargs
