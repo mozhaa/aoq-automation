@@ -1,15 +1,18 @@
-from aiogram.filters import Filter
-from aiogram.types import Message, ReplyKeyboardMarkup, ReplyKeyboardRemove
-from aiogram.fsm.context import FSMContext
-from typing import *
-from aiogram.fsm.state import State
-from aiogram import Router, F
-from aiogram.dispatcher.event.handler import CallableObject, CallbackType
-from aiogram.dispatcher.event.telegram import TelegramEventObserver
 from dataclasses import dataclass
 from functools import partial
+from typing import *
 from uuid import uuid1
+
+from aiogram import F, Router
+from aiogram.dispatcher.event.handler import CallableObject, CallbackType
+from aiogram.filters import Filter
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State
+from aiogram.types import Message, ReplyKeyboardMarkup, ReplyKeyboardRemove
+
 from aoq_automation.database.models import *
+
+from .filterset import Filterset
 
 
 class StateValue(Filter):
@@ -26,60 +29,31 @@ class RouterBuilder:
     def as_routers(self) -> Tuple[Router, Router]: ...
 
 
-class Filterset:
-    """
-    Set of filters in disjunctive normal form
-    """
-
-    def __init__(self, filters: List[List[Filter]] | List[Filter] | Filter) -> None:
-        if not isinstance(filters, list):
-            self._table = [[filters]]
-        elif isinstance(filters, list) and all(
-            [not isinstance(el, list) for el in filters]
-        ):
-            self._table = [filters]
-        else:
-            self._table = filters
-
-    def register(
-        self,
-        observer: TelegramEventObserver,
-        callback: CallbackType,
-        appendix: List[Filter] | Filter = [],
-    ) -> None:
-        if not isinstance(appendix, list):
-            appendix = [appendix]
-        for filter_set in self._table:
-            observer.register(callback, *(appendix + filter_set))
-
-    @property
-    def empty(self) -> bool:
-        return len(self._table) == 0
-
-
 @dataclass
 class SurveyQuestion:
     """
     Question class for Survey.
 
-    key - string, that will be used as a key for storing value in FSMContext after correct input
-    filterset - filterset in disjunctive normal form
+    key - string, that will be used as a key for storing value in FSMContext
+    after correct input
+
+    filter - filter for correct input
+
     welcome_message - string with optional placeholder {key}
+
     invalidation_message - string with optional placeholders {key} and {response}
+
     keyboard_markup - optional ReplyKeyboardMarkup
+
     save - save answer into state or not
     """
 
     key: str
-    filterset: Filterset | List[List[Filter]] | List[Filter] | Filter
+    filter: Filter
     welcome_message: str = "Enter value for {key}"
     invalidation_message: str = '"{response}" is invalid value for {key}, try again'
     keyboard_markup: Optional[ReplyKeyboardMarkup] = None
     save: bool = True
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.filterset, Filterset):
-            self.filterset = Filterset(self.filterset)
 
 
 class Survey(RouterBuilder):
@@ -89,8 +63,8 @@ class Survey(RouterBuilder):
         on_exit: CallbackType,
         on_cancel: Optional[CallbackType] = None,
         state: Optional[State] = None,
-        enter_filterset: Filterset | List[List[Filter]] = [[]],
-        cancel_filterset: Filterset | List[List[Filter]] = [[F.text == "/cancel"]],
+        enter_filter: Filter = Filterset([[]]),
+        cancel_filter: Filter = Filterset([[F.text == "/cancel"]]),
     ) -> None:
         self.questions = questions
 
@@ -103,22 +77,11 @@ class Survey(RouterBuilder):
         # State, that will be used during whole Survey
         self.state = state
 
-        # Filter set, that triggers this survey to start
-        self.enter_filterset = (
-            enter_filterset
-            if isinstance(enter_filterset, Filterset)
-            else Filterset(enter_filterset)
-        )
+        # Filter, that triggers this survey to start
+        self.enter_filter = enter_filter
 
-        # Filter set, that triggers this survey to cancel in the middle
-        self.cancel_filterset = (
-            cancel_filterset
-            if isinstance(cancel_filterset, Filterset)
-            else Filterset(cancel_filterset)
-        )
-
-        if self.on_cancel is None and not self.cancel_filterset.empty():
-            raise ValueError()
+        # Filter, that triggers this survey to cancel in the middle
+        self.cancel_filter = cancel_filter
 
         self.step_key = f"_survey_step_{uuid1()}"
 
@@ -140,31 +103,34 @@ class Survey(RouterBuilder):
 
     def as_routers(self) -> Tuple[Router, Router]:
         """
-        Returns two routers: router that handles successful updates, and router for invalid updates
-        Second router (fr) should be chained to fallback_router in main module
+        Returns two routers: router that handles successful updates, and router for
+        invalid updates. Second router (fr) should be chained to fallback_router
+        in main module
         """
 
         r = Router()
         fr = Router()
 
+        @r.message(StateValue(self.step_key, None), self.enter_filter)
         async def on_enter(message: Message, state: FSMContext) -> None:
             await self._send_welcome_message(message, 0)
             if self.state is not None:
                 await state.set_state(self.state)
             await state.update_data({self.step_key: 0})
 
-        async def on_cancel(message: Message, state: FSMContext, **kwargs) -> None:
-            await self.on_cancel.call(message, state, **kwargs)
+        @r.message(~StateValue(self.step_key, None), self.cancel_filter)
+        async def on_cancel(message: Message, state: FSMContext) -> None:
+            await self.on_cancel.call(message, state)
 
         async def on_correct_input(
-            step: int, message: Message, state: FSMContext, **kwargs
+            step: int, message: Message, state: FSMContext
         ) -> None:
             question = self.questions[step]
             if question.save:
                 await state.update_data({question.key: message.text})
             if step == len(self.questions) - 1:
                 await state.update_data({self.step_key: None})
-                await self.on_exit.call(message, state, **kwargs)
+                await self.on_exit.call(message, state)
             else:
                 await state.update_data({self.step_key: step + 1})
                 await self._send_welcome_message(message, step + 1)
@@ -174,23 +140,13 @@ class Survey(RouterBuilder):
         ) -> None:
             await self._send_invalidation_message(message, step)
 
-        self.enter_filterset.register(
-            r.message, on_enter, StateValue(self.step_key, None)
-        )
-
-        self.cancel_filterset.register(
-            r.message, on_cancel, ~StateValue(self.step_key, None)
-        )
-
         for step, question in enumerate(self.questions):
             # Step-dependant handlers
-
-            question.filterset.register(
-                r.message,
+            r.message.register(
                 partial(on_correct_input, step),
                 StateValue(self.step_key, step),
+                question.filter,
             )
-
             fr.message.register(
                 partial(on_invalid_input, step), StateValue(self.step_key, step)
             )
@@ -201,5 +157,3 @@ class Survey(RouterBuilder):
         nr, nfr = self.as_routers()
         r.include_router(nr)
         fr.include_router(nfr)
-
-
