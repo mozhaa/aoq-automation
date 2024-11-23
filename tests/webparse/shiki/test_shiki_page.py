@@ -32,7 +32,7 @@ async def test_page_3():
     url = "https://shikimori.one/animes/151231231"
     page = ShikiPageParser(url)
     await page.load_pages()
-    assert not page.valid
+    assert not page.is_valid()
 
 
 @pytest.mark.asyncio
@@ -41,7 +41,7 @@ async def test_page_4():
     url = "https://shikimori.one/animes/y590-kage-kara-mamoru"
     page = ShikiPageParser(url)
     await page.load_pages()
-    assert page.valid
+    assert page.is_valid()
 
 
 @pytest.mark.asyncio
@@ -50,7 +50,7 @@ async def test_page_5():
     url = "https://shikimori.one/animes/590"
     page = ShikiPageParser(url)
     await page.load_pages()
-    assert page.valid
+    assert page.is_valid()
 
 
 @pytest.fixture

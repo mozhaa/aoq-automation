@@ -13,7 +13,7 @@ async def test_page_1():
     url = "https://anidb.net/anime/13734"
     page = AniDBPageParser(url)
     await page.load_pages()
-    assert page.valid
+    assert page.is_valid()
 
 
 @pytest.mark.asyncio
@@ -22,7 +22,7 @@ async def test_page_2():
     url = "https://anidb.net/anime/222"
     page = AniDBPageParser(url)
     await page.load_pages()
-    assert page.valid
+    assert page.is_valid()
 
 
 @pytest.mark.asyncio
@@ -31,7 +31,7 @@ async def test_page_3():
     url = "https://anidb.net/anime/4112"
     page = AniDBPageParser(url)
     await page.load_pages()
-    assert page.valid
+    assert page.is_valid()
 
 
 @pytest.fixture

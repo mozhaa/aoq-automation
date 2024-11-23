@@ -13,8 +13,7 @@ class PageParser:
     def url(self) -> str:
         return self._url
 
-    @property
-    def valid(self) -> bool:
+    def is_valid(self) -> bool:
         return self._valid
 
     @abstractmethod

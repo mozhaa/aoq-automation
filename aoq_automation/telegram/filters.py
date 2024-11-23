@@ -1,121 +1,136 @@
-from abc import abstractmethod
-from functools import partialmethod
 from typing import *
 
 from aiogram.filters import Filter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
+from sqlalchemy import select
 
+from aoq_automation.database.database import db
+from aoq_automation.database.models import *
 from aoq_automation.webparse.anidb import *
 from aoq_automation.webparse.mal import *
 from aoq_automation.webparse.shiki import *
 
-from .filterset import Filterset
+
+async def anime_id_by_mal_url(mal_url: str) -> Optional[int]:
+    async with db.async_session() as sess:
+        anime = await sess.scalar(select(Anime).where(Anime.mal_url == mal_url))
+        if anime is not None:
+            return anime.id
 
 
-class TraceFilter(Filter):
-    """
-    Filter, that takes input either from message.text (if key is None) or state[key].
-    You can chain them, so that first will take message.text as input,
-    and next ones will take inputs from state.
-    """
-
-    def __init__(
-        self, key: str = None, key_preprocess: Callable[[str], str] = None
-    ) -> None:
-        self.key = key
-        self.key_preprocess = key_preprocess
-
-    async def __call__(self, message: Message, state: FSMContext, **kwargs) -> bool:
-        value = message.text if self.key is None else await state.get_value(self.key)
-        if self.key_preprocess is not None:
-            value = self.key_preprocess(value)
-        return await self.call(value, message, state, **kwargs)
-
-    @abstractmethod
-    async def call(
-        self, value: str, message: Message, state: FSMContext, **kwargs
-    ) -> bool: ...
+async def parse_anime_page(
+    up: UrlParser, pp_type: Type[PageParser], state: FSMContext, key: str
+) -> bool:
+    if not up.is_valid():
+        return False
+    pp = pp_type(up.url)
+    await pp.load_pages()
+    if not pp.is_valid():
+        return False
+    await state.update_data({key: pp.as_parsed()})
+    await state.update_data({key + "_up": up})
+    await state.update_data({key + "_pp": pp})
+    return True
 
 
-class AsAnimeUrl(TraceFilter):
-    def __init__(
-        self,
-        url_parser: Type[UrlParser],
-        page_parser: Type[PageParser],
-        output_key: str,
-        input_key: str = None,
-        input_key_preprocess: Callable[[Any], str] = None,
-    ) -> None:
-        self.url_parser = url_parser
-        self.page_parser = page_parser
-        self.output_key = output_key
-        super().__init__(key=input_key, key_preprocess=input_key_preprocess)
-
-    async def call(
-        self, value: str, message: Message, state: FSMContext, **kwargs
-    ) -> bool:
-        url_parser = self.url_parser(value)
-        if not url_parser.is_valid():
-            return False
-        page_parser = self.page_parser(url_parser.url)
-        await page_parser.load_pages()
-        if not page_parser.valid:
-            return False
-        await state.update_data({self.output_key: page_parser.as_parsed()})
-        await state.update_data({self.output_key + "_url": url_parser})
-        await state.update_data({self.output_key + "_page": page_parser})
+async def as_mal_url(mal_up: MALUrlParser, state: FSMContext) -> bool:
+    anime_id = await anime_id_by_mal_url(mal_up.url)
+    if anime_id is not None:
+        # if anime already in database, presume that all parsed info is also in DB
+        await state.update_data(anime_id=anime_id)
         return True
 
+    # otherwise, parse all pages
+    mal_res = await parse_anime_page(mal_up, MALPageParser, state, "mal")
+    if not mal_res:
+        return False
 
-def mal_to_shiki_url(url_parser: MALUrlParser) -> str:
-    return ShikiUrlParser.from_mal_id(url_parser.mal_id).url
-
-
-def shiki_to_anidb_url(page_parser: ShikiPageParser) -> str:
-    return page_parser.anidb_url
-
-
-def anidb_to_mal_url(page_parser: AniDBPageParser) -> str:
-    return page_parser.mal_url
-
-
-class AsShikiUrl(AsAnimeUrl):
-    __init__ = partialmethod(
-        AsAnimeUrl.__init__, ShikiUrlParser, ShikiPageParser, "shiki"
+    shiki_res = await parse_anime_page(
+        ShikiUrlParser.from_mal_id(mal_up.mal_id), ShikiPageParser, state, "shiki"
     )
+    if not shiki_res:
+        return False
 
-
-class AsAniDBUrl(AsAnimeUrl):
-    __init__ = partialmethod(
-        AsAnimeUrl.__init__, AniDBUrlParser, AniDBPageParser, "anidb"
+    shiki_pp = await state.get_value("shiki_pp")
+    anidb_res = await parse_anime_page(
+        AniDBUrlParser(shiki_pp.anidb_url), AniDBPageParser, state, "anidb"
     )
+    if not anidb_res:
+        return False
+
+    return True
 
 
-class AsMALUrl(AsAnimeUrl):
-    __init__ = partialmethod(AsAnimeUrl.__init__, MALUrlParser, MALPageParser, "mal")
+async def as_shiki_url(shiki_up: ShikiUrlParser, state: FSMContext) -> bool:
+    anime_id = await anime_id_by_mal_url(shiki_up.mal_url)
+    if anime_id is not None:
+        await state.update_data(anime_id=anime_id)
+        return True
+
+    shiki_res = await parse_anime_page(shiki_up, ShikiPageParser, state, "shiki")
+    if not shiki_res:
+        return False
+
+    shiki_pp = await state.get_value("shiki_pp")
+    anidb_res = await parse_anime_page(
+        AniDBUrlParser(shiki_pp.anidb_url), AniDBPageParser, state, "anidb"
+    )
+    if not anidb_res:
+        return False
+
+    mal_res = await parse_anime_page(
+        MALUrlParser(shiki_up.mal_url), MALPageParser, state, "mal"
+    )
+    if not mal_res:
+        return False
+
+    return True
 
 
-# NOTE: MAL -(id from url)-> Shiki -(link on page)-> AniDB -(link on page)-> MAL
-AsUnknownUrl = Filterset(
-    [
-        [
-            AsMALUrl(),
-            AsShikiUrl("mal_url", mal_to_shiki_url),
-            AsAniDBUrl("shiki_page", shiki_to_anidb_url),
-        ],
-        [
-            AsShikiUrl(),
-            AsAniDBUrl("shiki_page", shiki_to_anidb_url),
-            AsMALUrl("anidb_page", anidb_to_mal_url),
-        ],
-        [
-            AsAniDBUrl(),
-            AsMALUrl("anidb_page", anidb_to_mal_url),
-            AsShikiUrl("mal_url", mal_to_shiki_url),
-        ],
-    ]
-)
+async def as_anidb_url(anidb_up: AniDBUrlParser, state: FSMContext) -> bool:
+    async with db.async_session() as sess:
+        p_anime_anidb = await sess.scalar(
+            select(PAnimeAniDB).where(PAnimeAniDB.url == anidb_up.url)
+        )
+        if p_anime_anidb is not None:
+            anime_id = p_anime_anidb.anime_id
+            await state.update_data(anime_id=anime_id)
+            return True
+
+    anidb_res = await parse_anime_page(anidb_up, AniDBPageParser, state, "anidb")
+    if not anidb_res:
+        return False
+
+    anidb_pp = await state.get_value("anidb_pp")
+    mal_res = await parse_anime_page(
+        MALUrlParser(anidb_pp.mal_url), MALPageParser, state, "mal"
+    )
+    if not mal_res:
+        return False
+
+    mal_up = await state.get_value("mal_up")
+    shiki_res = await parse_anime_page(
+        ShikiUrlParser.from_mal_id(mal_up.mal_id), ShikiPageParser, state, "shiki"
+    )
+    if not shiki_res:
+        return False
+
+    return True
+
+
+async def as_anime_query(message: Message, state: FSMContext) -> bool:
+    mal_up = MALUrlParser(message.text)
+    if mal_up.is_valid():
+        return await as_mal_url(mal_up, state)
+    shiki_up = ShikiUrlParser(message.text)
+    if shiki_up.is_valid():
+        return await as_shiki_url(shiki_up, state)
+    anidb_up = AniDBUrlParser(message.text)
+    if anidb_up.is_valid():
+        return await as_anidb_url(anidb_up, state)
+    # TODO: as search query
+    return False
 
 
 class AsQItem(Filter):

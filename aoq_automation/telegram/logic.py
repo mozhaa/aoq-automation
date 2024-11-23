@@ -11,7 +11,6 @@ from sqlalchemy import select
 from aoq_automation.config import config
 from aoq_automation.database.database import db
 from aoq_automation.database.models import *
-from aoq_automation.database.tools import get_or_create
 
 from .markups import *
 from .filters import *
@@ -66,15 +65,20 @@ async def anime_page(message: Message, state: FSMContext) -> None:
 
 @redirect_to(anime_page)
 async def to_anime_page(message: Message, state: FSMContext) -> None:
-    mal_page = await state.get_value("mal_page")
-    anime = Anime(mal_url=mal_page.url, title_ro=mal_page.title_ro)
-    anime_id, is_new = await get_or_create(anime, ["mal_url"])
-    if is_new:
-        async with db.async_session() as session:
-            p_anime_mal = mal_page.as_parsed()
-            p_anime_mal.anime_id = anime_id
-            session.add(p_anime_mal)
-            await session.commit()
+    anime_id = await state.get_value("anime_id")
+    if anime_id is not None:
+        # anime already in database
+        return
+    mal_pp = await state.get_value("mal_pp")
+    async with db.async_session() as sess:
+        anime = Anime(mal_url=mal_pp.url, title_ro=mal_pp.title_ro)
+        sess.add(anime)
+        for key in ["mal", "shiki", "anidb"]:
+            p_anime = await state.get_value(key)
+            p_anime.anime = anime
+            sess.add(p_anime)
+        await sess.commit()
+        anime_id = await anime.awaitable_attrs.id
     await state.update_data(anime_id=anime_id)
 
 
@@ -90,7 +94,7 @@ async def delete_anime(message: Message, state: FSMContext) -> None:
 
 Survey(
     questions=[
-        SurveyQuestion(key="URL", filter=AsUnknownUrl, save=False),
+        SurveyQuestion(key="URL", filter=as_anime_query, save=False),
     ],
     state=Form.searching_anime,
     on_exit=to_anime_page,

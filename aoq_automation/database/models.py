@@ -1,7 +1,7 @@
 import inspect
 import sys
 from datetime import datetime
-from typing import List, Optional
+from typing import *
 
 from sqlalchemy import ForeignKey, UniqueConstraint, func
 from sqlalchemy.ext.asyncio import AsyncAttrs
@@ -17,12 +17,24 @@ from sqlalchemy.schema import CreateTable
 from .utils import parse_time_as_seconds, raises_only
 
 
+def keyvalgen(obj):
+    """Generate attr name/val pairs, filtering out SQLA attrs."""
+    excl = ("_sa_adapter", "_sa_instance_state")
+    for k, v in vars(obj).items():
+        if not k.startswith("_") and not any(hasattr(v, a) for a in excl):
+            yield k, v
+
+
 class Base(AsyncAttrs, DeclarativeBase):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         server_default=func.now(), onupdate=func.now()
     )
+
+    def __repr__(self):
+        params = ", ".join(f"{k}={v}" for k, v in keyvalgen(self))
+        return f"{self.__class__.__name__}({params})"
 
 
 class Anime(Base):
@@ -36,9 +48,15 @@ class Anime(Base):
     qitems: Mapped[List["QItem"]] = relationship(
         back_populates="anime", cascade="all, delete"
     )
-    p_mal: Mapped["PAnimeMAL"] = relationship(cascade="all, delete")
-    p_shiki: Mapped["PAnimeShiki"] = relationship(cascade="all, delete")
-    p_anidb: Mapped["PAnimeAniDB"] = relationship(cascade="all, delete")
+    p_mal: Mapped["PAnimeMAL"] = relationship(
+        back_populates="anime", cascade="all, delete"
+    )
+    p_shiki: Mapped["PAnimeShiki"] = relationship(
+        back_populates="anime", cascade="all, delete"
+    )
+    p_anidb: Mapped["PAnimeAniDB"] = relationship(
+        back_populates="anime", cascade="all, delete"
+    )
 
     __table_args__ = (UniqueConstraint("mal_url", name="_mal_url_uc"),)
 
@@ -184,6 +202,8 @@ class PAnimeMAL(Base):
     dropped: Mapped[int]
     on_hold: Mapped[int]
 
+    anime: Mapped[Anime] = relationship(back_populates="p_mal")
+
 
 class PAnimeShiki(Base):
     """Parsed Anime information from Shikimori"""
@@ -208,6 +228,8 @@ class PAnimeShiki(Base):
     dropped: Mapped[int]
     on_hold: Mapped[int]
 
+    anime: Mapped[Anime] = relationship(back_populates="p_shiki")
+
 
 class PAnimeAniDB(Base):
     """Parsed Anime information from AniDB"""
@@ -220,6 +242,8 @@ class PAnimeAniDB(Base):
     anidb_id: Mapped[int]
     airing_start: Mapped[datetime]
     airing_end: Mapped[Optional[datetime]]
+
+    anime: Mapped[Anime] = relationship(back_populates="p_anidb")
 
 
 class PQItemAniDB(Base):
