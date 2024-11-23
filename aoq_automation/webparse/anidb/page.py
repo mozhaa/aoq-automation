@@ -15,15 +15,11 @@ class AniDBPageParser(PageParser):
         async with ClientSession() as session:
             try:
                 self._main_page = await pget(session=session, url=self.url)
-                if (
-                    self._main_page is None
-                    or len(self._main_page.find(".error").eq(0)) > 0
-                ):
-                    self._valid = False
-                else:
+                if len(self._main_page.find(".error").eq(0)) == 0:
                     self._valid = True
+                    return
             except InvalidURLError:
-                self._valid = False
+                pass
 
     def as_parsed(self) -> PAnimeAniDB:
         return PAnimeAniDB(
@@ -32,10 +28,6 @@ class AniDBPageParser(PageParser):
             airing_start=self.airing_start,
             airing_end=self.airing_end,
         )
-
-    @property
-    def valid(self) -> bool:
-        return self._valid
 
     @property
     def anidb_id(self) -> int:

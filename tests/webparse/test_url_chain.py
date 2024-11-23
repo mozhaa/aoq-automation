@@ -12,21 +12,63 @@ class MockMessage:
     text: str
 
 
+async def process_url(url: str) -> bool:
+    state = FSMContext(storage=MemoryStorage(), key=StorageKey(0, 0, 0))
+    message = MockMessage(text=url)
+    return await AsUnknownUrl(message, state)
+
+
 @pytest.mark.asyncio
-async def test_unknown_url():
+@pytest.mark.webtest
+async def test_redirect_shiki_1():
     urls = [
-        "https://anidb.net/anime/14603",
-        "https://myanimelist.net/anime/24415/Kuroko_no_Basket_3rd_Season",
-        "https://shikimori.one/animes/52991-sousou-no-frieren",
         "https://shikimori.one/animes/y590-kage-kara-mamoru",
         "https://anidb.net/perl-bin/animedb.pl?show=anime&aid=4112",
-        "https://anidb.net/anime/10320",
-        "https://myanimelist.net/anime/9047",
+        "https://myanimelist.net/anime/590",
     ]
 
     for url in urls:
         print(f"Testing {url}...")
-        state = FSMContext(storage=MemoryStorage(), key=StorageKey(0, 0, 0))
-        message = MockMessage(text=url)
-        result = await AsUnknownUrl(message, state)
-        assert result
+        assert await process_url(url)
+
+
+@pytest.mark.asyncio
+@pytest.mark.webtest
+async def test_redirect_shiki_2():
+    urls = [
+        "https://shikimori.one/animes/9969",
+        "https://myanimelist.net/anime/9969",
+        "https://anidb.net/anime/8126",
+    ]
+
+    for url in urls:
+        print(f"Testing {url}...")
+        assert await process_url(url)
+
+
+@pytest.mark.asyncio
+@pytest.mark.webtest
+async def test_random_1():
+    urls = [
+        "https://anidb.net/anime/12337",
+        "https://myanimelist.net/anime/33889",
+        "https://shikimori.one/animes/33889",
+    ]
+
+    for url in urls:
+        print(f"Testing {url}...")
+        assert await process_url(url)
+
+
+@pytest.mark.asyncio
+@pytest.mark.webtest
+async def test_random_2():
+    urls = [
+        "https://anidb.net/anime/17156",
+        "https://myanimelist.net/anime/50917",
+        "https://shikimori.one/animes/50917",
+    ]
+
+    for url in urls:
+        print(f"Testing {url}...")
+        assert await process_url(url)

@@ -13,7 +13,7 @@ class AniDBUrlParser(UrlParser):
     @default(False)
     def _anime(self) -> bool:
         return self.anidb_id is not None
-    
+
     @classmethod
     def _url_from_anidb_id(cls, anidb_id: int) -> str:
         return f"https://anidb.net/anime/{anidb_id}"

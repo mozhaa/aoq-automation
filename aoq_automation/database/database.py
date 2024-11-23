@@ -25,11 +25,11 @@ class Database:
     async def create_tables(self) -> None:
         async with self._engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-        
+
     async def drop_tables(self) -> None:
         async with self._engine.begin() as conn:
             await conn.run_sync(Base.metadata.drop_all)
-    
+
     async def recreate_tables(self) -> None:
         await self.drop_tables()
         await self.create_tables()

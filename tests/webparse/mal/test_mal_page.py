@@ -7,6 +7,7 @@ from aoq_automation.webparse.mal import MALPageParser
 
 
 @pytest.mark.asyncio
+@pytest.mark.webtest
 async def test_page_1():
     url = "https://myanimelist.net/anime/56964"
     page = MALPageParser(url)
@@ -17,8 +18,9 @@ async def test_page_1():
     )
     assert page.title_ro == "Raise wa Tanin ga Ii"
 
-    
+
 @pytest.mark.asyncio
+@pytest.mark.webtest
 async def test_page_2():
     url = "https://myanimelist.net/anime/457"
     page = MALPageParser(url)
@@ -28,6 +30,7 @@ async def test_page_2():
 
 
 @pytest.mark.asyncio
+@pytest.mark.webtest
 async def test_page_3():
     url = "https://myanimelist.net/anime/52991"
     page = MALPageParser(url)

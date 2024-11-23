@@ -7,6 +7,7 @@ from aoq_automation.webparse.shiki import ShikiPageParser
 
 
 @pytest.mark.asyncio
+@pytest.mark.webtest
 async def test_page_1():
     url = "https://shikimori.one/animes/y28851-koe-no-katachi"
     page = ShikiPageParser(url)
@@ -16,6 +17,7 @@ async def test_page_1():
 
 
 @pytest.mark.asyncio
+@pytest.mark.webtest
 async def test_page_2():
     url = "https://shikimori.one/animes/49603-trip-trap"
     page = ShikiPageParser(url)
@@ -25,6 +27,7 @@ async def test_page_2():
 
 
 @pytest.mark.asyncio
+@pytest.mark.webtest
 async def test_page_3():
     url = "https://shikimori.one/animes/151231231"
     page = ShikiPageParser(url)
@@ -33,6 +36,7 @@ async def test_page_3():
 
 
 @pytest.mark.asyncio
+@pytest.mark.webtest
 async def test_page_4():
     url = "https://shikimori.one/animes/y590-kage-kara-mamoru"
     page = ShikiPageParser(url)
@@ -41,6 +45,7 @@ async def test_page_4():
 
 
 @pytest.mark.asyncio
+@pytest.mark.webtest
 async def test_page_5():
     url = "https://shikimori.one/animes/590"
     page = ShikiPageParser(url)
@@ -119,4 +124,6 @@ def test_poster_thumb_url(page_1):
 
 
 def test_anidb_url(page_1):
-    assert page_1.anidb_url == "http://anidb.net/perl-bin/animedb.pl?show=anime&aid=4112"
+    assert (
+        page_1.anidb_url == "http://anidb.net/perl-bin/animedb.pl?show=anime&aid=4112"
+    )

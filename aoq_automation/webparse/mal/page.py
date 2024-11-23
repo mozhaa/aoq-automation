@@ -16,7 +16,7 @@ class MALPageParser(PageParser):
                 self._stats_page = await pget(session=session, url=self.stats_url)
                 self._valid = True
             except InvalidURLError:
-                self._valid = False
+                pass
 
     def as_parsed(self) -> PAnimeMAL:
         return PAnimeMAL(
@@ -34,10 +34,6 @@ class MALPageParser(PageParser):
             dropped=self.dropped,
             on_hold=self.on_hold,
         )
-
-    @property
-    def valid(self) -> bool:
-        return self._valid
 
     @cached_property
     def stats_url(self) -> str:

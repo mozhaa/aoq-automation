@@ -18,7 +18,7 @@ async def main() -> None:
         action="store_true",
     )
     args = parser.parse_args()
-    
+
     db.connect(echo=args.verbose_sql)
     print("connected to database")
     if args.recreate_tables:

@@ -7,35 +7,26 @@ from aoq_automation.database.models import PAnimeShiki
 
 from ..pageparser import PageParser
 from ..utils import InvalidURLError, default, pget
-from .url import ShikiUrlParser
 
 
 class ShikiPageParser(PageParser):
     async def load_pages(self) -> None:
         async with ClientSession() as session:
-            self._valid = False
             try:
-                url = self.url
                 while True:
-                    self._main_page = await pget(session=session, url=url, ignore_status_code=True)
-                    if self._main_page is None:
-                        return
+                    self._main_page = await pget(
+                        session=session, url=self._url, ignore_status_code=True
+                    )
                     errors = self._main_page.find(".error-404").eq(0)
-                    if len(errors) > 0:
-                        if errors.text() == "302":
-                            new_url = self._main_page.find(".dialog a").attr["href"]
-                            url_parser = ShikiUrlParser(new_url)
-                            if not url_parser.is_valid():
-                                return
-                            if url == url_parser.url:
-                                return
-                            url = url_parser.url
-                            continue
-                        else:
-                            return
-                    else:
+                    if len(errors) == 0:
                         self._valid = True
                         return
+                    if errors.text() != "302":
+                        return
+                    new_url = self._main_page.find(".dialog a").attr["href"]
+                    if self._url == new_url:
+                        return
+                    self._url = new_url
             except InvalidURLError:
                 return
 
@@ -55,10 +46,6 @@ class ShikiPageParser(PageParser):
             dropped=self.dropped,
             on_hold=self.on_hold,
         )
-
-    @property
-    def valid(self) -> bool:
-        return self._valid
 
     @cached_property
     @default("https://shikimori.one/assets/globals/missing/main.png")

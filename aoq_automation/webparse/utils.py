@@ -11,7 +11,8 @@ default_headers = {
 }
 
 
-class InvalidURLError(BaseException): ...
+class InvalidURLError(BaseException):
+    pass
 
 
 async def pget(

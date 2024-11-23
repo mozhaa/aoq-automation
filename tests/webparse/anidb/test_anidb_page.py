@@ -8,6 +8,7 @@ from aoq_automation.webparse.anidb import AniDBPageParser
 
 
 @pytest.mark.asyncio
+@pytest.mark.webtest
 async def test_page_1():
     url = "https://anidb.net/anime/13734"
     page = AniDBPageParser(url)
@@ -16,6 +17,7 @@ async def test_page_1():
 
 
 @pytest.mark.asyncio
+@pytest.mark.webtest
 async def test_page_2():
     url = "https://anidb.net/anime/222"
     page = AniDBPageParser(url)
@@ -24,6 +26,7 @@ async def test_page_2():
 
 
 @pytest.mark.asyncio
+@pytest.mark.webtest
 async def test_page_3():
     url = "https://anidb.net/anime/4112"
     page = AniDBPageParser(url)
